@@ -1,14 +1,11 @@
 import '../styles/atlas.css'
 import { useState } from 'react'
-import LandingPage from './components/LandingPage'
 import LoginPage from './components/LoginPage'
-import OnboardingPage from './components/OnboardingPage'
-import DashboardLayout from './components/DashboardLayout'
-
-export type Page = 'landing' | 'login' | 'onboarding' | 'dashboard'
+import AppShell from './components/AppShell'
+import { AtlasProvider } from './store'
 
 export default function App() {
-  const [page, setPage] = useState<Page>('landing')
+  const [authenticated, setAuthenticated] = useState(false)
 
   return (
     <div style={{
@@ -17,10 +14,13 @@ export default function App() {
       minHeight: '100vh',
       color: '#f1f5f9',
     }}>
-      {page === 'landing' && <LandingPage navigate={setPage} />}
-      {page === 'login' && <LoginPage navigate={setPage} />}
-      {page === 'onboarding' && <OnboardingPage navigate={setPage} />}
-      {page === 'dashboard' && <DashboardLayout navigate={setPage} />}
+      {authenticated ? (
+        <AtlasProvider>
+          <AppShell onLogout={() => setAuthenticated(false)} />
+        </AtlasProvider>
+      ) : (
+        <LoginPage onEnter={() => setAuthenticated(true)} />
+      )}
     </div>
   )
 }

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Sparkles, RotateCcw, ThumbsUp, ThumbsDown, TrendingDown, TrendingUp, AlertCircle, BarChart3 } from 'lucide-react'
 import { C } from './atlas-tokens'
+import { Pill } from './atlas-ui'
+import { useAtlas } from '../store'
 
 interface Message {
   id: number
@@ -30,57 +32,82 @@ const AI_RESPONSES: Record<string, string> = {
   'melhorar meu cac': `📉 **Como Reduzir seu CAC — Análise Completa**\n\nSeu CAC atual é de R$143, que está 15% acima do benchmark do setor. Veja como otimizar:\n\n**Canal com melhor CAC:**\n- Indicação: R$28 (🏆 melhor)\n- Orgânico/SEO: R$62\n- Social Media: R$118\n- Google Ads: R$165 (mais alto)\n\n**Oportunidades identificadas:**\n1. Criar programa de indicação estruturado pode triplicar o volume deste canal\n2. Seu blog tem 3.400 visitas/mês mas taxa de conversão de apenas 0,8% — landing page precisa de melhorias\n3. Google Ads tem CPC 40% acima do setor — otimização de palavras-chave negativas pode reduzir 25%\n\n💡 **Meta realista:** Com essas ações, seu CAC pode chegar a R$95-110 em 60 dias, liberando R$4.000+/mês em orçamento de crescimento.`,
 
   'canal traz mais': `📡 **Análise de Canais de Aquisição**\n\nBaseado nos últimos 90 dias de dados:\n\n| Canal | Clientes | Receita | LTV | CAC |\n|-------|----------|---------|-----|-----|\n| Indicação | 28 | R$8.4K | R$1.8K | R$28 |\n| Orgânico | 45 | R$9.2K | R$1.4K | R$62 |\n| Instagram | 38 | R$7.1K | R$890 | R$118 |\n| Google Ads | 31 | R$5.8K | R$760 | R$165 |\n\n**🏆 Indicação é o canal com melhor ROI**, mas representa apenas 18% do volume total — grande oportunidade de expansão.\n\n**O canal orgânico** tem a maior receita total e boa relação CAC/LTV. Investir em conteúdo pode multiplicar este canal sem aumento proporcional de custo.\n\n💡 **Ação:** Crie um programa de indicação com incentivo para referrer e indicado. Empresas similares conseguiram 3x de volume de indicações com essa estratégia.`,
+
+  'margem e custos': `💰 **Margem e Estrutura de Custos**\n\nSua margem bruta está em **42%**, quatro pontos acima da média do setor (38%). Ela oscilou entre 37% e 47% no ano, com o melhor resultado em setembro.\n\n**Como seus custos estão distribuídos:**\n- Custo fixo: 40% (benchmark do porte: 35%)\n- Custo variável: 35%\n- Investimento: 25%\n\n**O ponto de atenção** é o custo fixo. Os 5 pontos percentuais acima do benchmark equivalem a cerca de **R$ 2.400 por mês** que poderiam ir para crescimento.\n\n💡 **Recomendação:** levante os contratos recorrentes com vencimento neste trimestre — normalmente é onde está a maior folga de negociação sem impacto na operação.`,
+
+  'funil de vendas': `🎯 **Diagnóstico do Funil de Vendas**\n\nSeu funil hoje:\n\n| Etapa | Volume | Conversão |\n|-------|--------|-----------|\n| Visitantes | 12.400 | — |\n| Leads | 3.800 | 31% |\n| Propostas | 1.200 | 32% |\n| Fechados | 420 | 35% |\n\n**A entrada do funil está saudável.** A conversão de visitante para lead (31%) está acima da média do setor, de 25%.\n\n**O gargalo está no fechamento.** 35% contra um benchmark de 42% — e há **28 propostas paradas há mais de 7 dias** sem contato registrado, o equivalente a R$ 12,4K em negociações estagnadas.\n\n💡 **Ação imediata:** ative uma sequência de follow-up de 3 toques para propostas sem contato há mais de 5 dias. Recuperar só um terço dessas propostas já representa R$ 4K no mês.`,
 }
 
 function getResponse(question: string): string {
   const q = question.toLowerCase()
-  if (q.includes('vend') && (q.includes('caiu') || q.includes('queda'))) return AI_RESPONSES['vendas caíram']
-  if (q.includes('unidade') || q.includes('performa')) return AI_RESPONSES['unidade performa']
-  if (q.includes('perdendo') || q.includes('clientes') || q.includes('churn')) return AI_RESPONSES['perdendo clientes']
-  if (q.includes('priorizar') || q.includes('produtos')) return AI_RESPONSES['priorizar']
-  if (q.includes('cac') || q.includes('aquisição')) return AI_RESPONSES['melhorar meu cac']
-  if (q.includes('canal') || q.includes('receita')) return AI_RESPONSES['canal traz mais']
-  return `🔍 **Analisando seus dados...**\n\nCom base nos seus painéis conectados (Financeiro, Comercial, Clientes), vou analisar sua pergunta: **"${question}"**\n\nIdentifiquei dados relevantes em 3 dos seus painéis ativos. A análise cruzada indica que há fatores inter-relacionados que precisam ser considerados em conjunto.\n\nPara uma análise mais precisa, conecte as fontes de dados relacionadas à sua pergunta na tela de Integrações. O Atlas pode então fornecer insights mais detalhados e acionáveis.\n\n💡 **Dica:** Quanto mais dados você conectar, mais precisas serão as análises do Atlas. Tente conectar seu ERP para análises financeiras mais aprofundadas.`
+  if (q.includes('cac') || q.includes('aquisição') || q.includes('anúncio')) return AI_RESPONSES['melhorar meu cac']
+  if ((q.includes('vend') || q.includes('faturamento') || q.includes('receita')) && (q.includes('caiu') || q.includes('queda') || q.includes('cair') || q.includes('baixa'))) return AI_RESPONSES['vendas caíram']
+  if (q.includes('unidade') || q.includes('performa') || q.includes('loja')) return AI_RESPONSES['unidade performa']
+  if (q.includes('churn') || q.includes('perdendo') || q.includes('recompra') || q.includes('retenção') || q.includes('cliente')) return AI_RESPONSES['perdendo clientes']
+  if (q.includes('priorizar') || q.includes('produto') || q.includes('portfólio')) return AI_RESPONSES['priorizar']
+  if (q.includes('canal') || q.includes('indicação') || q.includes('receita')) return AI_RESPONSES['canal traz mais']
+  if (q.includes('margem') || q.includes('custo') || q.includes('despesa')) return AI_RESPONSES['margem e custos']
+  if (q.includes('proposta') || q.includes('conversão') || q.includes('funil')) return AI_RESPONSES['funil de vendas']
+  return `🔍 **Analisando seus dados...**\n\nCruzei sua pergunta — **"${question}"** — com os três painéis conectados (Financeiro, Comercial e Clientes) e com o histórico dos últimos 12 meses.\n\nEncontrei sinais relevantes em mais de um painel, o que indica fatores inter-relacionados. Para uma leitura mais precisa sobre esse ponto específico, vale conectar a fonte de dados relacionada em Integrações.\n\n💡 **Sugestão:** reformule citando a métrica que você quer entender (faturamento, margem, CAC, churn, conversão) — assim consigo trazer números e uma recomendação direta.`
+}
+
+// Converte o texto da resposta em elementos: negrito, listas, tabelas e títulos.
+function inline(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={i} style={{ color: C.text, fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+      : <span key={i}>{part}</span>
+  )
 }
 
 function formatMessage(text: string) {
-  const lines = text.split('\n')
-  return lines.map((line, i) => {
-    if (line.startsWith('**') && line.endsWith('**')) {
-      return <div key={i} style={{ color: C.text, fontWeight: 600, marginTop: 10, marginBottom: 4 }}>{line.slice(2, -2)}</div>
-    }
-    if (line.match(/^\*\*.*\*\*/)) {
-      const parts = line.split(/(\*\*[^*]+\*\*)/)
+  return text.split('\n').map((line, i) => {
+    const bare = line.replace(/^[^\w*]*\s*/, '')
+
+    // Linha inteira em negrito (com ou sem emoji na frente) vira título.
+    if (/^\*\*[^*]+\*\*$/.test(bare.trim())) {
+      const prefix = line.slice(0, line.indexOf('**'))
       return (
-        <p key={i} style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.65, marginBottom: 2 }}>
-          {parts.map((part, j) => part.startsWith('**') ? <strong key={j} style={{ color: C.text }}>{part.slice(2, -2)}</strong> : part)}
-        </p>
+        <div key={i} style={{ color: C.text, fontSize: 14.5, fontWeight: 650, marginTop: i === 0 ? 0 : 12, marginBottom: 5 }}>
+          {prefix}{bare.trim().slice(2, -2)}
+        </div>
       )
     }
     if (line.startsWith('- ')) {
-      return <div key={i} style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.65, paddingLeft: 12, marginBottom: 2 }}>• {line.slice(2)}</div>
+      return <div key={i} style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.65, paddingLeft: 12, marginBottom: 2 }}>• {inline(line.slice(2))}</div>
     }
-    if (line.match(/^\d\./)) {
-      return <div key={i} style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.65, paddingLeft: 4, marginBottom: 2 }}>{line}</div>
+    if (/^\d+\./.test(line)) {
+      return <div key={i} style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.65, paddingLeft: 4, marginBottom: 4 }}>{inline(line)}</div>
     }
     if (line.startsWith('|')) {
-      return <div key={i} style={{ color: C.textSubtle, fontSize: 12, fontFamily: 'monospace', marginBottom: 1 }}>{line}</div>
+      if (/^\|[\s|:-]+\|$/.test(line)) return null
+      const cells = line.split('|').slice(1, -1)
+      return (
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: `repeat(${cells.length}, 1fr)`, gap: 8, padding: '5px 0', borderBottom: `1px solid ${C.borderSubtle}` }}>
+          {cells.map((c, j) => (
+            <span key={j} style={{ color: j === 0 ? C.textMuted : C.text, fontSize: 12.5, fontWeight: j === 0 ? 400 : 500 }}>{c.trim()}</span>
+          ))}
+        </div>
+      )
     }
     if (line === '') return <div key={i} style={{ height: 6 }} />
-    return <p key={i} style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.65 }}>{line}</p>
+    return <p key={i} style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.65 }}>{inline(line)}</p>
   })
 }
 
+const WELCOME = 'Olá, João. Eu leio continuamente as suas fontes conectadas e consigo responder sobre o seu negócio em linguagem natural — sem fórmula, sem consulta técnica.\n\nO que você quer entender hoje?'
+
 export default function AIAssistant() {
+  const { pendingQuestion, clearPendingQuestion, sources, insights } = useAtlas()
   const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 0, role: 'assistant', timestamp: 'Agora',
-      text: '👋 Olá! Sou o assistente de IA do Atlas. Tenho acesso a todos os seus dados conectados e posso responder perguntas sobre seu negócio em linguagem natural.\n\nO que você gostaria de analisar hoje?',
-    },
+    { id: 0, role: 'assistant', timestamp: 'Agora', text: WELCOME },
   ])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  const connected = sources.filter(s => s.connected).length
+  const novos = insights.filter(i => i.status === 'novo').length
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -97,11 +124,19 @@ export default function AIAssistant() {
       setTyping(false)
       const reply: Message = { id: Date.now() + 1, role: 'assistant', text: getResponse(q), timestamp: 'Agora' }
       setMessages(prev => [...prev, reply])
-    }, 1600 + Math.random() * 800)
+    }, 1500 + Math.random() * 700)
   }
 
+  // Perguntas abertas a partir de um insight ou da tela inicial chegam por aqui.
+  useEffect(() => {
+    if (!pendingQuestion) return
+    sendMessage(pendingQuestion)
+    clearPendingQuestion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingQuestion])
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg }}>
+    <div className="atlas-page" style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg }}>
       {/* Header */}
       <div style={{ padding: '20px 28px', borderBottom: `1px solid ${C.borderSubtle}`, background: C.bg2, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -110,12 +145,15 @@ export default function AIAssistant() {
           </div>
           <div>
             <div style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>Atlas IA</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.green }} />
-              <span style={{ color: C.textSubtle, fontSize: 12 }}>Analisando 3 fontes de dados conectadas</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="atlas-glow" style={{ width: 6, height: 6, borderRadius: '50%', background: C.green }} />
+                <span style={{ color: C.textSubtle, fontSize: 12 }}>Lendo {connected} fontes conectadas</span>
+              </div>
+              <Pill color={C.purpleLight} background="rgba(139,92,246,0.12)">{novos} insights no radar</Pill>
             </div>
           </div>
-          <button onClick={() => setMessages([{ id: 0, role: 'assistant', timestamp: 'Agora', text: '👋 Olá! Conversa reiniciada. Como posso ajudar você a entender seus dados hoje?' }])}
+          <button onClick={() => setMessages([{ id: 0, role: 'assistant', timestamp: 'Agora', text: 'Conversa reiniciada. O que você quer entender agora?' }])}
             style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 8, background: 'none', border: `1px solid ${C.borderSubtle}`, color: C.textMuted, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderMd; e.currentTarget.style.color = C.text }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderSubtle; e.currentTarget.style.color = C.textMuted }}>
