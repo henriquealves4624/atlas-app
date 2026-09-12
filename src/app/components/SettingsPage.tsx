@@ -3,6 +3,7 @@ import { User, Bell, Users, CreditCard, Shield, Plug, Check, ChevronDown, Mail }
 import { C } from './atlas-tokens'
 import { Reveal, Card, Pill, PrimaryButton } from './atlas-ui'
 import { useAtlas } from '../store'
+import { USER } from './atlas-data'
 
 type Tab = 'conta' | 'notificacoes' | 'equipe' | 'plano' | 'seguranca'
 
@@ -46,7 +47,7 @@ export default function SettingsPage() {
               <span style={{ color: C.textSubtle, marginTop: 1 }}><Plug size={15} /></span>
               <div>
                 <div style={{ color: C.textMuted, fontSize: 13.5, fontWeight: 500 }}>Fontes de dados</div>
-                <div style={{ color: C.textSubtle, fontSize: 11.5, marginTop: 2 }}>{sources.filter(s => s.connected).length} conectadas</div>
+                <div style={{ color: C.textSubtle, fontSize: 11.5, marginTop: 2 }}>{sources.length} conectadas</div>
               </div>
             </button>
           </div>
@@ -111,15 +112,15 @@ function Toggle({ label, hint, value, onChange }: { label: string; hint: string;
 // ── Abas ────────────────────────────────────────────────────────────────────
 
 function ContaTab({ onSave }: { onSave: () => void }) {
-  const [name, setName] = useState('João Silva')
-  const [email, setEmail] = useState('joao@empresa.com')
-  const [company, setCompany] = useState('Silva Comércio Ltda')
+  const [name, setName] = useState(USER.name)
+  const [email, setEmail] = useState(USER.email)
+  const [company, setCompany] = useState(USER.company)
   const [segment, setSegment] = useState('Varejo')
 
   return (
     <Card padding={24}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22, paddingBottom: 20, borderBottom: `1px solid ${C.borderSubtle}` }}>
-        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: 'white' }}>J</div>
+        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: 'white' }}>{USER.initial}</div>
         <div style={{ flex: 1 }}>
           <div style={{ color: C.text, fontSize: 16, fontWeight: 650 }}>{name}</div>
           <div style={{ color: C.textSubtle, fontSize: 13 }}>{email}</div>
@@ -169,7 +170,7 @@ function NotificacoesTab() {
 
 function EquipeTab({ onInvite }: { onInvite: () => void }) {
   const members = [
-    { name: 'João Silva', email: 'joao@empresa.com', role: 'Administrador', initial: 'J', color: '#7c3aed' },
+    { name: USER.name, email: USER.email, role: 'Administrador', initial: USER.initial, color: '#7c3aed' },
     { name: 'Marina Costa', email: 'marina@empresa.com', role: 'Editor', initial: 'M', color: '#3b82f6' },
     { name: 'Rafael Lima', email: 'rafael@empresa.com', role: 'Leitor', initial: 'R', color: '#34d399' },
   ]
@@ -200,10 +201,11 @@ function EquipeTab({ onInvite }: { onInvite: () => void }) {
 }
 
 function PlanoTab() {
+  const { sources, panels } = useAtlas()
   const usage = [
-    { label: 'Fontes de dados', used: 3, total: 10 },
-    { label: 'Painéis publicados', used: 3, total: 20 },
-    { label: 'Perguntas à Atlas IA', used: 128, total: 500 },
+    { label: 'Fontes de dados', used: sources.length, total: 10 },
+    { label: 'Painéis publicados', used: panels.length, total: 20 },
+    { label: 'Perguntas à Atlas IA', used: 0, total: 500 },
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

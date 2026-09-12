@@ -297,3 +297,64 @@
     opacity: 1 !important;
   }
 }
+
+/* ── Modais e fluxo ──────────────────────────────────────────────────────── */
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.atlas-overlay { animation: overlay-in 0.22s ease; }
+.atlas-modal { animation: modal-in 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes step-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.flow-step { animation: step-in 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Progresso de conexão */
+@keyframes line-fill { from { width: 0; } to { width: 100%; } }
+.line-fill { animation: line-fill 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+@keyframes check-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.check-pop { animation: check-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* ── Kanban ──────────────────────────────────────────────────────────────── */
+.kanban-col { transition: background 0.2s ease, border-color 0.2s ease; }
+.kanban-col.drag-over {
+  background: rgba(139, 92, 246, 0.07) !important;
+  border-color: rgba(139, 92, 246, 0.35) !important;
+}
+.kanban-card {
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  cursor: grab;
+}
+.kanban-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+.kanban-card.dragging { opacity: 0.4; cursor: grabbing; }
+
+/* Linha de tabela */
+.table-row { transition: background 0.15s ease; }
+.table-row:hover { background: rgba(139, 92, 246, 0.05); }
+
+/* Aparecimento de um insight recém-gerado */
+@keyframes insight-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.insight-in { animation: insight-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-modal, .atlas-overlay, .flow-step, .line-fill, .check-pop, .insight-in {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

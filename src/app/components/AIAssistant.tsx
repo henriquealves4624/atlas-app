@@ -3,6 +3,7 @@ import { Send, Sparkles, RotateCcw, ThumbsUp, ThumbsDown, TrendingDown, Trending
 import { C } from './atlas-tokens'
 import { Pill } from './atlas-ui'
 import { useAtlas } from '../store'
+import { USER } from './atlas-data'
 
 interface Message {
   id: number
@@ -106,8 +107,8 @@ export default function AIAssistant() {
   const [typing, setTyping] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const connected = sources.filter(s => s.connected).length
-  const novos = insights.filter(i => i.status === 'novo').length
+  const connected = sources.length
+  const novos = insights.filter(i => i.status === 'gerado').length
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -148,9 +149,9 @@ export default function AIAssistant() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div className="atlas-glow" style={{ width: 6, height: 6, borderRadius: '50%', background: C.green }} />
-                <span style={{ color: C.textSubtle, fontSize: 12 }}>Lendo {connected} fontes conectadas</span>
+                <span style={{ color: C.textSubtle, fontSize: 12 }}>{connected === 0 ? 'Nenhuma fonte conectada ainda' : `Lendo ${connected} ${connected === 1 ? 'fonte conectada' : 'fontes conectadas'}`}</span>
               </div>
-              <Pill color={C.purpleLight} background="rgba(139,92,246,0.12)">{novos} insights no radar</Pill>
+              {novos > 0 && <Pill color={C.purpleLight} background="rgba(139,92,246,0.12)">{novos} insights no radar</Pill>}
             </div>
           </div>
           <button onClick={() => setMessages([{ id: 0, role: 'assistant', timestamp: 'Agora', text: 'Conversa reiniciada. O que você quer entender agora?' }])}
@@ -201,7 +202,7 @@ export default function AIAssistant() {
             </div>
             {msg.role === 'user' && (
               <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #7c3aed, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, alignSelf: 'flex-end' }}>
-                <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>J</span>
+                <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>{USER.initial}</span>
               </div>
             )}
           </div>

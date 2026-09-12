@@ -1,175 +1,170 @@
-import { useRef, useState } from 'react'
-import { Plus, RefreshCw, CheckCircle2, Unplug, PanelTop, Sparkles } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Plus, RefreshCw, Unplug, Check, LayoutDashboard, ArrowRight } from 'lucide-react'
 import { C } from './atlas-tokens'
-import { Reveal, Pill, Card } from './atlas-ui'
+import { Reveal, Card, Segmented, PrimaryButton, GhostButton, EmptyState, Pill } from './atlas-ui'
 import { useAtlas } from '../store'
+import { SOURCE_CATALOG, type SourceCatalogItem } from './atlas-data'
 
-const CATEGORIES = ['Todos', 'Analytics', 'Planilhas', 'CRM', 'ERP', 'Produtividade']
+type Mode = 'disponiveis' | 'conectadas'
 
 export default function IntegrationsPage() {
-  const { sources, connectSource, disconnectSource, go, toast } = useAtlas()
-  const [connecting, setConnecting] = useState<string | null>(null)
+  const { sources, isConnected, disconnectSource, startFlow, toast } = useAtlas()
+  const [mode, setMode] = useState<Mode>(sources.length > 0 ? 'conectadas' : 'disponiveis')
+  const [category, setCategory] = useState('Todas')
   const [syncing, setSyncing] = useState<string | null>(null)
-  const [filter, setFilter] = useState('Todos')
-  const availableRef = useRef<HTMLDivElement>(null)
 
-  const visible = filter === 'Todos' ? sources : sources.filter(s => s.category === filter)
-  const connected = visible.filter(s => s.connected)
-  const available = visible.filter(s => !s.connected)
-  const totalConnected = sources.filter(s => s.connected).length
+  const connectedItems = SOURCE_CATALOG.filter(s => isConnected(s.id))
+  // Ferramentas de visualização têm caminho próprio, pelo banner acima da lista.
+  const availableItems = SOURCE_CATALOG.filter(s => !isConnected(s.id) && !s.visualization)
 
-  const handleConnect = (id: string, name: string) => {
-    setConnecting(id)
-    setTimeout(() => {
-      connectSource(id)
-      setConnecting(null)
-      toast(`${name} conectado`, 'A Atlas IA já começou a ler esses dados em busca de insights.')
-    }, 1700)
-  }
+  const base = mode === 'conectadas' ? connectedItems : availableItems
+  const categories = useMemo(
+    () => ['Todas', ...Array.from(new Set(base.map(s => s.category)))],
+    [base],
+  )
+  const visible = category === 'Todas' ? base : base.filter(s => s.category === category)
 
-  const handleSync = (id: string, name: string) => {
-    setSyncing(id)
+  const sync = (item: SourceCatalogItem) => {
+    setSyncing(item.id)
     setTimeout(() => {
       setSyncing(null)
-      toast(`${name} sincronizado`, 'Os painéis conectados a esta fonte foram atualizados.', 'info')
+      toast(`${item.name} sincronizado`, 'Os painéis ligados a esta fonte foram atualizados.', 'info')
     }, 1400)
   }
 
   return (
-    <div className="atlas-page" style={{ padding: '26px 30px 44px', maxWidth: 1340, margin: '0 auto' }}>
+    <div className="atlas-page" style={{ padding: '28px 32px 52px', maxWidth: 1180, margin: '0 auto' }}>
       <Reveal>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 22 }}>
-          <div>
-            <h1 style={{ color: C.text, fontSize: 24, fontWeight: 750, letterSpacing: '-0.025em', marginBottom: 7 }}>Integrações</h1>
-            <p style={{ color: C.textMuted, fontSize: 14.5, lineHeight: 1.6, maxWidth: 640 }}>
-              O primeiro passo da jornada: conecte as ferramentas que sua empresa já usa. Cada fonte passa a ser lida
-              automaticamente pela Atlas IA em segundo plano.
-            </p>
-          </div>
-          <button onClick={() => availableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="atlas-btn-primary"
-            style={{ padding: '10px 18px', borderRadius: 10, color: 'white', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-            <Plus size={15} /> Conectar nova fonte
-          </button>
-        </div>
+        <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, letterSpacing: '-0.028em', marginBottom: 8 }}>Integrações</h1>
+        <p style={{ color: C.textMuted, fontSize: 14.5, lineHeight: 1.6, maxWidth: 620, marginBottom: 26 }}>
+          Conecte as ferramentas que sua empresa já usa. O Atlas passa a ler esses dados para encontrar o que merece atenção.
+        </p>
       </Reveal>
 
+      {/* Dois números, sem ruído */}
       <Reveal delay={60}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(268px, 1fr))', gap: 14, marginBottom: 26 }}>
-          {[
-            { label: 'Fontes conectadas', val: `${totalConnected}`, sub: 'Lidas continuamente pela IA', color: C.green },
-            { label: 'Disponíveis para conectar', val: `${sources.length - totalConnected}`, sub: 'Sem custo adicional no plano Pro', color: C.purpleLight },
-            { label: 'Última sincronização', val: '2 min', sub: 'Power BI · automática', color: C.blueLight },
-          ].map(s => (
-            <Card key={s.label} padding={19}>
-              <div style={{ color: C.textSubtle, fontSize: 12.5, marginBottom: 8 }}>{s.label}</div>
-              <div style={{ color: s.color, fontSize: 26, fontWeight: 750, letterSpacing: '-0.025em', marginBottom: 5 }}>{s.val}</div>
-              <div style={{ color: C.textSubtle, fontSize: 12 }}>{s.sub}</div>
-            </Card>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginBottom: 28 }}>
+          <Card padding={19}>
+            <div style={{ color: C.textSubtle, fontSize: 12.5, marginBottom: 8 }}>Fontes conectadas</div>
+            <div style={{ color: connectedItems.length ? C.green : C.textSubtle, fontSize: 27, fontWeight: 700, letterSpacing: '-0.03em' }}>
+              {connectedItems.length}
+            </div>
+          </Card>
+          <Card padding={19}>
+            <div style={{ color: C.textSubtle, fontSize: 12.5, marginBottom: 8 }}>Disponíveis para conectar</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <span style={{ color: C.purpleLight, fontSize: 27, fontWeight: 700, letterSpacing: '-0.03em' }}>{availableItems.length}</span>
+              <span style={{ color: C.textSubtle, fontSize: 12.5 }}>sem custo adicional</span>
+            </div>
+          </Card>
         </div>
       </Reveal>
 
+      {/* Banner das ferramentas de visualização */}
       <Reveal delay={100}>
-        <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, border: `1px solid ${C.borderSubtle}`, marginBottom: 24, width: 'fit-content' }}>
-          {CATEGORIES.map(cat => (
-            <button key={cat} onClick={() => setFilter(cat)}
-              style={{ padding: '7px 15px', borderRadius: 8, border: 'none', background: filter === cat ? 'rgba(139,92,246,0.2)' : 'transparent', color: filter === cat ? C.purpleLight : C.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: filter === cat ? 600 : 400, transition: 'all 0.18s' }}>
-              {cat}
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', borderRadius: 16, border: '1px solid rgba(139,92,246,0.2)', background: 'rgba(139,92,246,0.06)', padding: '20px 22px', marginBottom: 26 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(139,92,246,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purpleLight, flexShrink: 0 }}>
+            <LayoutDashboard size={18} />
+          </div>
+          <div style={{ flex: '1 1 340px', minWidth: 0 }}>
+            <div style={{ color: C.text, fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Já utiliza uma ferramenta de visualização?</div>
+            <div style={{ color: C.textMuted, fontSize: 13.5, lineHeight: 1.6 }}>
+              Conecte uma ferramenta que sua empresa já utiliza e aproveite seus painéis no Atlas.
+            </div>
+          </div>
+          <PrimaryButton onClick={() => startFlow('tool-pick')} icon={<ArrowRight size={15} />}>Conectar ferramenta</PrimaryButton>
         </div>
       </Reveal>
 
-      {connected.length > 0 && (
-        <Reveal delay={140}>
-          <div style={{ color: C.textSubtle, fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 13 }}>Conectadas</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(268px, 1fr))', gap: 14, marginBottom: 30 }}>
-            {connected.map(s => (
-              <div key={s.id} className="card-hover" style={{ background: 'rgba(15,12,28,0.72)', border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, backdropFilter: 'blur(12px)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 11, background: `${s.color}22`, border: `1px solid ${s.color}55`, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: C.text, fontSize: 15, fontWeight: 650, marginBottom: 4 }}>{s.name}</div>
-                    <Pill>{s.category}</Pill>
-                  </div>
-                  <Pill color={C.green} background="rgba(52,211,153,0.1)" icon={<CheckCircle2 size={11} />}>Conectado</Pill>
-                </div>
-
-                <p style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 15, minHeight: 42 }}>{s.desc}</p>
-
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.borderSubtle}`, borderRadius: 11, padding: '11px 13px', marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ color: C.textSubtle, fontSize: 12 }}>Última sincronização</span>
-                    <span style={{ color: C.textMuted, fontSize: 12 }}>{s.lastSync}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: C.textSubtle, fontSize: 12 }}>Dados importados</span>
-                    <span style={{ color: C.textMuted, fontSize: 12 }}>{s.records}</span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => handleSync(s.id, s.name)} disabled={syncing === s.id} className="atlas-ghost"
-                    style={{ flex: 1, padding: '9px 0', borderRadius: 9, background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.borderSubtle}`, color: C.textMuted, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <RefreshCw size={13} style={syncing === s.id ? { animation: 'spin-slow 0.8s linear infinite' } : undefined} />
-                    {syncing === s.id ? 'Sincronizando...' : 'Sincronizar'}
-                  </button>
-                  <button onClick={() => { disconnectSource(s.id); toast(`${s.name} desconectado`, 'Os painéis que usavam essa fonte deixam de ser atualizados.', 'warn') }}
-                    title="Desconectar"
-                    style={{ width: 38, borderRadius: 9, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.22)', color: C.red, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Unplug size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      )}
-
-      <div ref={availableRef}>
-        {available.length > 0 && (
-          <Reveal delay={180}>
-            <div style={{ color: C.textSubtle, fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 13 }}>Disponíveis</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(268px, 1fr))', gap: 14 }}>
-              {available.map(s => (
-                <div key={s.id} className="card-hover" style={{ background: 'rgba(15,12,28,0.55)', border: `1px solid ${C.borderSubtle}`, borderRadius: 16, padding: 20, backdropFilter: 'blur(12px)' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 11, background: `${s.color}18`, border: `1px solid ${s.color}33`, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: C.text, fontSize: 15, fontWeight: 650, marginBottom: 4 }}>{s.name}</div>
-                      <Pill>{s.category}</Pill>
-                    </div>
-                  </div>
-                  <p style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 16, minHeight: 42 }}>{s.desc}</p>
-                  <button onClick={() => handleConnect(s.id, s.name)} disabled={connecting === s.id} className="atlas-btn-primary"
-                    style={{ width: '100%', padding: '10px 0', borderRadius: 10, color: 'white', border: 'none', cursor: connecting === s.id ? 'default' : 'pointer', fontSize: 13.5, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-                    {connecting === s.id ? (
-                      <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin-slow 0.7s linear infinite' }} /> Conectando...</>
-                    ) : (
-                      <><Plus size={14} /> Conectar</>
-                    )}
-                  </button>
-                </div>
+      {/* Filtros: primeiro o que eu quero fazer, depois a categoria */}
+      <Reveal delay={140}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+          <Segmented
+            value={mode}
+            onChange={(m: Mode) => { setMode(m); setCategory('Todas') }}
+            options={[
+              { value: 'disponiveis', label: `Fontes disponíveis` },
+              { value: 'conectadas', label: `Fontes conectadas${connectedItems.length ? ` (${connectedItems.length})` : ''}` },
+            ]}
+          />
+          {categories.length > 2 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {categories.map(cat => (
+                <button key={cat} onClick={() => setCategory(cat)}
+                  style={{ padding: '6px 13px', borderRadius: 9, cursor: 'pointer', fontSize: 12.5, fontWeight: category === cat ? 600 : 450, transition: 'all 0.18s', border: `1px solid ${category === cat ? C.borderMd : 'transparent'}`, background: category === cat ? 'rgba(139,92,246,0.1)' : 'transparent', color: category === cat ? C.purpleLight : C.textSubtle }}>
+                  {cat}
+                </button>
               ))}
             </div>
-          </Reveal>
-        )}
-      </div>
-
-      <Reveal delay={220}>
-        <div style={{ marginTop: 28, display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(139,92,246,0.06)', border: `1px solid ${C.border}`, borderRadius: 15, padding: '18px 20px', flexWrap: 'wrap' }}>
-          <Sparkles size={17} color={C.purpleLight} style={{ flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ color: C.text, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Não usa nenhuma ferramenta de BI?</div>
-            <div style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.6 }}>
-              Você pode montar um painel direto no Atlas a partir de uma planilha e a IA analisa esses dados do mesmo jeito.
-            </div>
-          </div>
-          <button onClick={() => go('builder')} className="atlas-btn-secondary"
-            style={{ padding: '10px 17px', borderRadius: 10, color: C.text, cursor: 'pointer', fontSize: 13.5, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 7 }}>
-            <PanelTop size={14} /> Criar painel no Atlas
-          </button>
+          )}
         </div>
+      </Reveal>
+
+      <Reveal delay={180}>
+        {visible.length === 0 ? (
+          <Card padding={0}>
+            <EmptyState
+              compact
+              icon={<Plus size={18} />}
+              title={mode === 'conectadas' ? 'Nenhuma fonte conectada ainda' : 'Nada disponível nesta categoria'}
+              description={mode === 'conectadas'
+                ? 'Conecte a primeira fonte para o Atlas começar a ler os dados da sua empresa.'
+                : 'Todas as fontes desta categoria já estão conectadas.'}
+              action={mode === 'conectadas'
+                ? <GhostButton onClick={() => setMode('disponiveis')}>Ver fontes disponíveis</GhostButton>
+                : undefined}
+            />
+          </Card>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 13 }}>
+            {visible.map(item => {
+              const connection = sources.find(s => s.id === item.id)
+              return (
+                <Card key={item.id} padding={19} hover>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 13 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: `${item.color}22`, border: `1px solid ${item.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: item.color, fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
+                      {item.name.charAt(0)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: C.text, fontSize: 14.5, fontWeight: 600 }}>{item.name}</div>
+                      <div style={{ color: C.textSubtle, fontSize: 12 }}>{item.category}</div>
+                    </div>
+                    {connection && <Pill color={C.green} background="rgba(52,211,153,0.1)" icon={<Check size={10} />}>Conectado</Pill>}
+                  </div>
+
+                  <p style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 16, minHeight: 42 }}>{item.desc}</p>
+
+                  {connection ? (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: C.textSubtle, fontSize: 12.5, marginBottom: 14 }}>
+                        <span>{connection.records}</span>
+                        <span>sincronizado {connection.lastSync}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <GhostButton
+                          style={{ flex: 1, padding: '9px 0' }}
+                          icon={<RefreshCw size={13} style={syncing === item.id ? { animation: 'spin-slow 0.8s linear infinite' } : undefined} />}
+                          onClick={() => sync(item)}
+                        >
+                          {syncing === item.id ? 'Sincronizando' : 'Sincronizar'}
+                        </GhostButton>
+                        <GhostButton tone="danger" style={{ padding: '9px 12px' }}
+                          onClick={() => { disconnectSource(item.id); toast(`${item.name} desconectado`, 'Os painéis ligados a essa fonte deixam de ser atualizados.', 'warn') }}>
+                          <Unplug size={14} />
+                        </GhostButton>
+                      </div>
+                    </>
+                  ) : (
+                    <PrimaryButton style={{ width: '100%' }} icon={<Plus size={14} />}
+                      onClick={() => startFlow('source-connect', { sourceId: item.id })}>
+                      Conectar
+                    </PrimaryButton>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
+        )}
       </Reveal>
     </div>
   )

@@ -1,139 +1,372 @@
-import { useState } from 'react'
-import { Inbox, Bookmark, Clock, CheckCircle2, Archive, Filter, ChevronRight, Sparkles } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import {
+  LayoutGrid, Columns3, List, Download, Plus, Lightbulb, ChevronDown, ChevronRight, Plug,
+} from 'lucide-react'
 import { C } from './atlas-tokens'
-import { Reveal, Card, Pill, PRIORITY_META } from './atlas-ui'
+import {
+  Reveal, Card, Segmented, ContextSelector, EmptyState, PrimaryButton, GhostButton,
+  STATUS_META, PRIORITY_META, TYPE_META, shortDate,
+} from './atlas-ui'
 import InsightCard from './InsightCard'
-import { TriageModal } from './InsightTriage'
-import { useAtlas } from '../store'
-import { PANEL_LABEL, type Insight, type InsightStatus, type Priority } from './atlas-data'
+import { TriageModal, ConclusionModal } from './InsightTriage'
+import { useAtlas, type Insight } from '../store'
+import type { InsightStatus } from './atlas-data'
 
-const TABS: { id: InsightStatus; label: string; icon: React.ReactNode; hint: string; color: string }[] = [
-  { id: 'novo', label: 'Aguardando avaliação', icon: <Inbox size={15} />, hint: 'Insights que o Atlas encontrou e ainda não foram tratados', color: C.purpleNeon },
-  { id: 'priorizado', label: 'Priorizados', icon: <Bookmark size={15} />, hint: 'No plano de ação, prontos para começar', color: C.purpleLight },
-  { id: 'andamento', label: 'Em andamento', icon: <Clock size={15} />, hint: 'Ações que a equipe já está executando', color: C.yellow },
-  { id: 'concluido', label: 'Concluídos', icon: <CheckCircle2 size={15} />, hint: 'Ações finalizadas e seus resultados', color: C.green },
-  { id: 'descartado', label: 'Descartados', icon: <Archive size={15} />, hint: 'Insights que não fazem sentido para o seu contexto', color: C.textSubtle },
-]
+type View = 'cards' | 'kanban' | 'lista'
+
+const FLOW: InsightStatus[] = ['backlog', 'andamento', 'concluido', 'descartado']
+const ALL: InsightStatus[] = ['gerado', ...FLOW]
 
 export default function InsightsPage() {
-  const { insights, insightStatusFilter, setInsightStatusFilter } = useAtlas()
-  const [priority, setPriority] = useState<Priority | 'todas'>('todas')
-  const [panel, setPanel] = useState<string>('todos')
+  const { insights, projects, panels, go, insightStatusFilter, setInsightStatusFilter } = useAtlas()
+  const [view, setView] = useState<View>('cards')
+  const [context, setContext] = useState<string | null>(null)
   const [triage, setTriage] = useState<Insight | null>(null)
+  const [conclude, setConclude] = useState<Insight | null>(null)
 
-  const status = insightStatusFilter === 'todos' ? 'novo' : insightStatusFilter
-  const count = (s: InsightStatus) => insights.filter(i => i.status === s).length
-
-  const filtered = insights.filter(i =>
-    i.status === status &&
-    (priority === 'todas' || i.priority === priority) &&
-    (panel === 'todos' || i.panelId === panel)
+  const scoped = useMemo(
+    () => context ? insights.filter(i => i.projectId === context) : insights,
+    [insights, context],
   )
+  const countOf = (status: InsightStatus) => scoped.filter(i => i.status === status).length
 
-  const activeTab = TABS.find(t => t.id === status)!
-  const impactoTotal = insights.filter(i => i.status === 'priorizado' || i.status === 'andamento').length
+  if (insights.length === 0) {
+    return (
+      <div className="atlas-page" style={{ padding: '28px 32px', maxWidth: 1180, margin: '0 auto' }}>
+        <Reveal>
+          <Header />
+          <Card padding={0}>
+            <EmptyState
+              icon={<Lightbulb size={19} />}
+              title="Nenhum insight ainda"
+              description="Assim que você conectar seus dados, a Atlas IA começa a identificar oportunidades, riscos e mudanças importantes."
+              action={<PrimaryButton onClick={() => go('integrations')} icon={<Plug size={15} />}>Conectar dados</PrimaryButton>}
+            />
+          </Card>
+        </Reveal>
+      </div>
+    )
+  }
 
   return (
-    <div className="atlas-page" style={{ padding: '26px 30px 44px', maxWidth: 1340, margin: '0 auto' }}>
+    <div className="atlas-page" style={{ padding: '28px 32px 52px', maxWidth: 1280, margin: '0 auto' }}>
       <Reveal>
-        <div style={{ marginBottom: 22 }}>
-          <h1 style={{ color: C.text, fontSize: 24, fontWeight: 750, letterSpacing: '-0.025em', marginBottom: 7 }}>Central de Insights</h1>
-          <p style={{ color: C.textMuted, fontSize: 14.5, lineHeight: 1.6, maxWidth: 720 }}>
-            Aqui cada descoberta da Atlas IA vira uma decisão: você avalia, prioriza e acompanha até virar ação.
-            {impactoTotal > 0 && <> Hoje há <strong style={{ color: C.purpleLight, fontWeight: 600 }}>{impactoTotal} ações</strong> no seu plano.</>}
-          </p>
-        </div>
+        <Header />
       </Reveal>
 
-      {/* Fluxo do insight */}
       <Reveal delay={60}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: 10, marginBottom: 24 }}>
-          {TABS.map((t, i) => {
-            const active = t.id === status
-            const n = count(t.id)
-            return (
-              <button key={t.id} onClick={() => setInsightStatusFilter(t.id)} className="journey-step"
-                style={{
-                  position: 'relative', textAlign: 'left', cursor: 'pointer',
-                  background: active ? 'rgba(139,92,246,0.1)' : 'rgba(15,12,28,0.7)',
-                  border: `1px solid ${active ? 'rgba(139,92,246,0.35)' : C.border}`,
-                  borderRadius: 14, padding: '15px 16px',
-                }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: t.color }}>
-                  {t.icon}
-                  <span style={{ color: active ? C.text : C.textMuted, fontSize: 12.5, fontWeight: 600 }}>{t.label}</span>
-                </div>
-                <div style={{ color: n > 0 ? t.color : C.textSubtle, fontSize: 26, fontWeight: 750, letterSpacing: '-0.03em' }}>{n}</div>
-                {i < TABS.length - 1 && (
-                  <ChevronRight size={14} color={C.textSubtle} style={{ position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)', zIndex: 1 }} />
-                )}
-              </button>
-            )
-          })}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 22 }}>
+          <Segmented
+            value={view}
+            onChange={(v: View) => setView(v)}
+            options={[
+              { value: 'cards', label: 'Cards', icon: <LayoutGrid size={13} /> },
+              { value: 'kanban', label: 'Kanban', icon: <Columns3 size={13} /> },
+              { value: 'lista', label: 'Lista', icon: <List size={13} /> },
+            ]}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {view === 'lista' && <ExportButton insights={scoped} projects={projects} panels={panels} />}
+            {projects.length > 0 && <ContextSelector value={context} onChange={setContext} projects={projects} />}
+          </div>
         </div>
       </Reveal>
 
-      {/* Filtros */}
-      <Reveal delay={100}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.textSubtle, fontSize: 12.5 }}>
-            <Filter size={13} /> Filtrar por
+      {view !== 'kanban' && (
+        <Reveal delay={100}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 20, borderBottom: `1px solid ${C.borderSubtle}`, paddingBottom: 2 }}>
+            {ALL.map(status => {
+              const meta = STATUS_META[status]
+              const active = insightStatusFilter === status
+              return (
+                <button key={status} onClick={() => setInsightStatusFilter(status)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 450, color: active ? C.text : C.textSubtle, borderBottom: `2px solid ${active ? C.purpleLight : 'transparent'}`, marginBottom: -2, transition: 'all 0.18s' }}>
+                  {meta.label}
+                  <span style={{ color: active ? C.purpleLight : C.textSubtle, fontSize: 12, fontWeight: 600 }}>{countOf(status)}</span>
+                </button>
+              )
+            })}
           </div>
-          <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', borderRadius: 9, padding: 3, border: `1px solid ${C.borderSubtle}` }}>
-            {(['todas', 'alta', 'media', 'baixa'] as const).map(p => (
-              <button key={p} onClick={() => setPriority(p)}
-                style={{ padding: '6px 13px', borderRadius: 7, border: 'none', background: priority === p ? 'rgba(139,92,246,0.2)' : 'transparent', color: priority === p ? C.purpleLight : C.textMuted, cursor: 'pointer', fontSize: 12.5, fontWeight: priority === p ? 600 : 400, transition: 'all 0.18s' }}>
-                {p === 'todas' ? 'Todas prioridades' : PRIORITY_META[p].label}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', borderRadius: 9, padding: 3, border: `1px solid ${C.borderSubtle}` }}>
-            {['todos', 'financeiro', 'comercial', 'clientes'].map(p => (
-              <button key={p} onClick={() => setPanel(p)}
-                style={{ padding: '6px 13px', borderRadius: 7, border: 'none', background: panel === p ? 'rgba(139,92,246,0.2)' : 'transparent', color: panel === p ? C.purpleLight : C.textMuted, cursor: 'pointer', fontSize: 12.5, fontWeight: panel === p ? 600 : 400, transition: 'all 0.18s' }}>
-                {p === 'todos' ? 'Todos os painéis' : PANEL_LABEL[p as keyof typeof PANEL_LABEL]}
-              </button>
-            ))}
-          </div>
-          <span style={{ marginLeft: 'auto', color: C.textSubtle, fontSize: 12.5 }}>
-            {filtered.length} {filtered.length === 1 ? 'insight' : 'insights'} · {activeTab.hint}
-          </span>
-        </div>
-      </Reveal>
+          <p style={{ color: C.textSubtle, fontSize: 12.5, marginBottom: 18 }}>{STATUS_META[insightStatusFilter].hint}</p>
+        </Reveal>
+      )}
 
-      {/* Lista */}
       <Reveal delay={140}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.length === 0 ? (
-            <Card style={{ textAlign: 'center', padding: '44px 24px' }}>
-              <div style={{ width: 46, height: 46, borderRadius: 13, background: 'rgba(139,92,246,0.1)', border: `1px solid ${C.borderMd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', color: C.purpleLight }}>
-                {activeTab.icon}
-              </div>
-              <div style={{ color: C.text, fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Nada em "{activeTab.label}"</div>
-              <div style={{ color: C.textSubtle, fontSize: 13.5, maxWidth: 400, margin: '0 auto', lineHeight: 1.6 }}>
-                {status === 'novo'
-                  ? 'Você avaliou todos os insights desta rodada. O Atlas continua monitorando suas fontes e avisa quando encontrar algo relevante.'
-                  : 'Nenhum insight neste estágio com os filtros aplicados.'}
-              </div>
-            </Card>
-          ) : filtered.map(ins => (
-            <InsightCard key={ins.id} insight={ins} onTriage={setTriage} showStatus />
-          ))}
-        </div>
-      </Reveal>
-
-      {/* Rodapé explicativo */}
-      <Reveal delay={200}>
-        <div style={{ marginTop: 26, display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(139,92,246,0.05)', border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 18px' }}>
-          <Sparkles size={16} color={C.purpleLight} style={{ flexShrink: 0 }} />
-          <span style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.6 }}>
-            A Atlas IA revisa suas fontes continuamente. Insights descartados ensinam o sistema a priorizar melhor o que importa para o seu negócio.
-          </span>
-          <Pill color={C.purpleLight} background="rgba(139,92,246,0.12)">Monitoramento ativo</Pill>
-        </div>
+        {view === 'cards' && (
+          <CardsView
+            insights={scoped.filter(i => i.status === insightStatusFilter)}
+            status={insightStatusFilter}
+            onTriage={setTriage}
+            onConclude={setConclude}
+          />
+        )}
+        {view === 'kanban' && (
+          <KanbanView insights={scoped} onTriage={setTriage} onConclude={setConclude} />
+        )}
+        {view === 'lista' && (
+          <ListView insights={scoped.filter(i => i.status === insightStatusFilter)} />
+        )}
       </Reveal>
 
       {triage && <TriageModal insight={triage} onClose={() => setTriage(null)} />}
+      {conclude && <ConclusionModal insight={conclude} onClose={() => setConclude(null)} />}
     </div>
   )
+}
+
+function Header() {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, letterSpacing: '-0.028em', marginBottom: 8 }}>Central de Insights</h1>
+      <p style={{ color: C.textMuted, fontSize: 14.5, lineHeight: 1.6, maxWidth: 680 }}>
+        Tudo o que a Atlas IA encontrou nos seus painéis, do que ainda precisa ser avaliado ao que já virou ação.
+      </p>
+    </div>
+  )
+}
+
+// ── Visão em cards ──────────────────────────────────────────────────────────
+
+function CardsView({ insights, status, onTriage, onConclude }: {
+  insights: Insight[]; status: InsightStatus; onTriage: (i: Insight) => void; onConclude: (i: Insight) => void
+}) {
+  const meta = STATUS_META[status]
+  if (insights.length === 0) {
+    return (
+      <Card padding={0}>
+        <EmptyState
+          compact
+          icon={meta.icon}
+          title={`Nada em ${meta.label.toLowerCase()}`}
+          description={status === 'gerado'
+            ? 'Você já avaliou todos os insights identificados até aqui.'
+            : 'Nenhum insight neste estágio no contexto selecionado.'}
+        />
+      </Card>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+      {insights.map(insight => (
+        <InsightCard key={insight.id} insight={insight} onAdd={onTriage} onConclude={onConclude} showOrigin showStatus={false} />
+      ))}
+    </div>
+  )
+}
+
+// ── Kanban ──────────────────────────────────────────────────────────────────
+
+function KanbanView({ insights, onTriage, onConclude }: {
+  insights: Insight[]; onTriage: (i: Insight) => void; onConclude: (i: Insight) => void
+}) {
+  const { setInsightStatus, toast } = useAtlas()
+  const [dragging, setDragging] = useState<string | null>(null)
+  const [over, setOver] = useState<InsightStatus | null>(null)
+  const [inboxOpen, setInboxOpen] = useState(true)
+
+  const generated = insights.filter(i => i.status === 'gerado')
+
+  const drop = (status: InsightStatus) => {
+    setOver(null)
+    const id = dragging
+    setDragging(null)
+    if (!id) return
+    const insight = insights.find(i => i.id === id)
+    if (!insight || insight.status === status) return
+
+    if (status === 'concluido') { onConclude(insight); return }
+    setInsightStatus(id, status)
+    toast(`Movido para ${STATUS_META[status].label.toLowerCase()}`, insight.title, 'info')
+  }
+
+  return (
+    <div>
+      {/* Caixa de entrada: insights ainda não avaliados */}
+      {generated.length > 0 && (
+        <div style={{ marginBottom: 18, border: `1px solid ${C.border}`, borderRadius: 15, background: 'rgba(15,12,28,0.5)', overflow: 'hidden' }}>
+          <button onClick={() => setInboxOpen(!inboxOpen)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+            {inboxOpen ? <ChevronDown size={15} color={C.textSubtle} /> : <ChevronRight size={15} color={C.textSubtle} />}
+            <span style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>Insights gerados</span>
+            <span style={{ background: 'rgba(192,132,252,0.14)', color: C.purpleNeon, borderRadius: 6, padding: '2px 8px', fontSize: 11.5, fontWeight: 700 }}>{generated.length}</span>
+            <span style={{ color: C.textSubtle, fontSize: 12.5, marginLeft: 4 }}>aguardando sua avaliação</span>
+          </button>
+          {inboxOpen && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(258px, 1fr))', gap: 10, padding: '0 18px 18px' }}>
+              {generated.map(insight => (
+                <div key={insight.id} style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${C.borderSubtle}`, borderLeft: `2px solid ${TYPE_META[insight.type].color}`, borderRadius: 11, padding: '13px 15px' }}>
+                  <div style={{ color: C.text, fontSize: 13.5, fontWeight: 600, lineHeight: 1.45, marginBottom: 6 }}>{insight.title}</div>
+                  <div style={{ color: C.textSubtle, fontSize: 12, marginBottom: 11 }}>{insight.impact}</div>
+                  <button onClick={() => onTriage(insight)} className="atlas-btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: 'none', color: 'white', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                    <Plus size={12} /> Adicionar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Fluxo */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(232px, 1fr))', gap: 13, alignItems: 'start' }}>
+        {FLOW.map(status => {
+          const meta = STATUS_META[status]
+          const items = insights.filter(i => i.status === status)
+          return (
+            <div key={status}
+              className={`kanban-col${over === status ? ' drag-over' : ''}`}
+              onDragOver={e => { e.preventDefault(); setOver(status) }}
+              onDragLeave={() => setOver(o => o === status ? null : o)}
+              onDrop={() => drop(status)}
+              style={{ background: 'rgba(15,12,28,0.42)', border: `1px solid ${C.borderSubtle}`, borderRadius: 15, padding: 13, minHeight: 220 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 13, padding: '2px 4px' }}>
+                <span style={{ color: meta.color }}>{meta.icon}</span>
+                <span style={{ color: C.text, fontSize: 13, fontWeight: 600, flex: 1 }}>{meta.label}</span>
+                <span style={{ color: C.textSubtle, fontSize: 12, fontWeight: 600 }}>{items.length}</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {items.map(insight => (
+                  <KanbanCard key={insight.id} insight={insight}
+                    dragging={dragging === insight.id}
+                    onDragStart={() => setDragging(insight.id)}
+                    onDragEnd={() => { setDragging(null); setOver(null) }}
+                  />
+                ))}
+                {items.length === 0 && (
+                  <div style={{ padding: '18px 10px', textAlign: 'center', color: C.textSubtle, fontSize: 12.5, lineHeight: 1.5, border: `1px dashed ${C.borderSubtle}`, borderRadius: 11 }}>
+                    Arraste um insight para cá
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <p style={{ color: C.textSubtle, fontSize: 12.5, marginTop: 16 }}>
+        Arraste os cards entre as colunas para mudar o estágio. Ao mover para concluídos, o Atlas pergunta o que foi feito.
+      </p>
+    </div>
+  )
+}
+
+function KanbanCard({ insight, dragging, onDragStart, onDragEnd }: {
+  insight: Insight; dragging: boolean; onDragStart: () => void; onDragEnd: () => void
+}) {
+  const { projects, panels } = useAtlas()
+  const project = projects.find(p => p.id === insight.projectId)
+  const panel = panels.find(p => p.id === insight.panelId)
+  const prio = PRIORITY_META[insight.priority]
+
+  return (
+    <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
+      className={`kanban-card${dragging ? ' dragging' : ''}`}
+      style={{ background: 'rgba(20,16,38,0.9)', border: `1px solid ${C.border}`, borderRadius: 11, padding: '13px 14px' }}>
+      <div style={{ color: C.text, fontSize: 13, fontWeight: 600, lineHeight: 1.45, marginBottom: 9 }}>{insight.title}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+        <span style={{ color: prio.color, fontSize: 11.5, fontWeight: 600 }}>{prio.label}</span>
+        <span style={{ color: C.textSubtle, opacity: 0.45 }}>·</span>
+        <span style={{ color: C.textSubtle, fontSize: 11.5 }}>{insight.category}</span>
+      </div>
+      {(project || panel) && (
+        <div style={{ color: C.textSubtle, fontSize: 11.5, marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {project?.name}{panel ? ` · ${panel.name}` : ''}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Lista / relatório ───────────────────────────────────────────────────────
+
+const COLS = ['Insight', 'Projeto', 'Painel', 'Categoria', 'Prioridade', 'Status', 'Data', 'Impacto']
+
+function ListView({ insights }: { insights: Insight[] }) {
+  const { projects, panels } = useAtlas()
+
+  if (insights.length === 0) {
+    return (
+      <Card padding={0}>
+        <EmptyState compact icon={<List size={18} />} title="Nada para listar"
+          description="Nenhum insight neste estágio no contexto selecionado." />
+      </Card>
+    )
+  }
+
+  return (
+    <div style={{ border: `1px solid ${C.border}`, borderRadius: 15, overflow: 'hidden', background: 'rgba(15,12,28,0.5)' }}>
+      <div style={{ overflowX: 'auto' }} className="atlas-scrollbar">
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 940 }}>
+          <thead>
+            <tr>
+              {COLS.map(col => (
+                <th key={col} style={{ textAlign: 'left', padding: '13px 16px', color: C.textSubtle, fontSize: 11.5, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: `1px solid ${C.borderSubtle}`, whiteSpace: 'nowrap' }}>
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {insights.map(insight => {
+              const project = projects.find(p => p.id === insight.projectId)
+              const panel = panels.find(p => p.id === insight.panelId)
+              const prio = PRIORITY_META[insight.priority]
+              const status = STATUS_META[insight.status]
+              return (
+                <tr key={insight.id} className="table-row" style={{ borderBottom: `1px solid ${C.borderSubtle}` }}>
+                  <td style={{ padding: '14px 16px', color: C.text, fontSize: 13.5, fontWeight: 500, maxWidth: 320 }}>{insight.title}</td>
+                  <td style={cell}>{project?.name ?? '—'}</td>
+                  <td style={cell}>{panel?.name ?? '—'}</td>
+                  <td style={cell}>{insight.category}</td>
+                  <td style={{ ...cell, color: prio.color }}>{prio.label}</td>
+                  <td style={{ ...cell, color: status.color }}>{status.short}</td>
+                  <td style={cell}>{shortDate(insight.createdAt)}</td>
+                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>{insight.impact}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+const cell: React.CSSProperties = { padding: '14px 16px', color: C.textMuted, fontSize: 13 }
+
+function ExportButton({ insights, projects, panels }: {
+  insights: Insight[]
+  projects: { id: string; name: string }[]
+  panels: { id: string; name: string }[]
+}) {
+  const { toast } = useAtlas()
+
+  const exportCsv = () => {
+    const rows = insights.map(i => [
+      i.title,
+      projects.find(p => p.id === i.projectId)?.name ?? '',
+      panels.find(p => p.id === i.panelId)?.name ?? '',
+      i.category,
+      PRIORITY_META[i.priority].label,
+      STATUS_META[i.status].short,
+      new Date(i.createdAt).toLocaleDateString('pt-BR'),
+      i.impact,
+    ])
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`
+    const csv = [COLS, ...rows].map(r => r.map(c => escape(String(c))).join(';')).join('\r\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `atlas-insights-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toast('Relatório exportado', `${insights.length} ${insights.length === 1 ? 'insight' : 'insights'} em CSV.`)
+  }
+
+  return <GhostButton icon={<Download size={14} />} onClick={exportCsv}>Exportar CSV</GhostButton>
 }
