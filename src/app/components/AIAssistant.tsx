@@ -39,8 +39,43 @@ const AI_RESPONSES: Record<string, string> = {
   'funil de vendas': `🎯 **Diagnóstico do Funil de Vendas**\n\nSeu funil hoje:\n\n| Etapa | Volume | Conversão |\n|-------|--------|-----------|\n| Visitantes | 12.400 | — |\n| Leads | 3.800 | 31% |\n| Propostas | 1.200 | 32% |\n| Fechados | 420 | 35% |\n\n**A entrada do funil está saudável.** A conversão de visitante para lead (31%) está acima da média do setor, de 25%.\n\n**O gargalo está no fechamento.** 35% contra um benchmark de 42% — e há **28 propostas paradas há mais de 7 dias** sem contato registrado, o equivalente a R$ 12,4K em negociações estagnadas.\n\n💡 **Ação imediata:** ative uma sequência de follow-up de 3 toques para propostas sem contato há mais de 5 dias. Recuperar só um terço dessas propostas já representa R$ 4K no mês.`,
 }
 
-function getResponse(question: string): string {
+interface AnswerContext {
+  panelNames: string[]
+  hasBudget: boolean
+}
+
+function panelsLabel(ctx: AnswerContext) {
+  const names = ctx.panelNames
+  if (names.length === 0) return 'as fontes conectadas'
+  if (names.length === 1) return `o painel ${names[0]}`
+  return `os painéis ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+}
+
+// O que aconteceu com o faturamento no último mês, lido a partir dos painéis conectados.
+function revenueLastMonth(question: string, ctx: AnswerContext): string {
+  const intro = `🔍 **Analisando seus dados...**\n\nCruzei sua pergunta — **"${question}"** — com ${panelsLabel(ctx)} e com o histórico dos últimos 12 meses.\n\n`
+  if (ctx.hasBudget) {
+    return intro
+      + `**O que aconteceu no último mês**\n`
+      + `- O faturamento realizado foi de **R$ 412K**, 6,4% abaixo dos R$ 440K orçados.\n`
+      + `- O resultado está abaixo do orçado desde março e o desvio acumulado no ano chega a **R$ 151K**.\n`
+      + `- Bruno Lima e Diego Rocha somam R$ 37K abaixo das metas; Ana Souza compensou parte da diferença com 117% do orçado.\n\n`
+      + `Mantido esse ritmo, o ano fecha em cerca de **95% do orçamento**.\n\n`
+      + `💡 **Recomendação:** revise o pipeline dos vendedores abaixo da meta e replique a abordagem da Ana antes do fechamento do próximo mês.`
+  }
+  return intro
+    + `**O que aconteceu no último mês**\n`
+    + `- O faturamento fechou em **R$ 82K**, 8,2% acima do mês anterior.\n`
+    + `- Nas últimas três semanas houve queda de 8%, concentrada nos produtos B e C.\n`
+    + `- O ticket médio subiu para R$ 187 e sustentou parte do resultado.\n\n`
+    + `💡 **Recomendação:** acompanhe a demanda dos produtos B e C antes que a queda afete o fechamento do mês.`
+}
+
+function getResponse(question: string, ctx: AnswerContext): string {
   const q = question.toLowerCase()
+  const aboutRevenue = q.includes('faturamento') || q.includes('receita')
+  const aboutLastMonth = q.includes('último mês') || q.includes('ultimo mes') || q.includes('mês passado') || (q.includes('aconteceu') && q.includes('mês'))
+  if (aboutRevenue && aboutLastMonth) return revenueLastMonth(question, ctx)
   if (q.includes('cac') || q.includes('aquisição') || q.includes('anúncio')) return AI_RESPONSES['melhorar meu cac']
   if ((q.includes('vend') || q.includes('faturamento') || q.includes('receita')) && (q.includes('caiu') || q.includes('queda') || q.includes('cair') || q.includes('baixa'))) return AI_RESPONSES['vendas caíram']
   if (q.includes('unidade') || q.includes('performa') || q.includes('loja')) return AI_RESPONSES['unidade performa']
@@ -49,7 +84,7 @@ function getResponse(question: string): string {
   if (q.includes('canal') || q.includes('indicação') || q.includes('receita')) return AI_RESPONSES['canal traz mais']
   if (q.includes('margem') || q.includes('custo') || q.includes('despesa')) return AI_RESPONSES['margem e custos']
   if (q.includes('proposta') || q.includes('conversão') || q.includes('funil')) return AI_RESPONSES['funil de vendas']
-  return `🔍 **Analisando seus dados...**\n\nCruzei sua pergunta — **"${question}"** — com os três painéis conectados (Financeiro, Comercial e Clientes) e com o histórico dos últimos 12 meses.\n\nEncontrei sinais relevantes em mais de um painel, o que indica fatores inter-relacionados. Para uma leitura mais precisa sobre esse ponto específico, vale conectar a fonte de dados relacionada em Integrações.\n\n💡 **Sugestão:** reformule citando a métrica que você quer entender (faturamento, margem, CAC, churn, conversão) — assim consigo trazer números e uma recomendação direta.`
+  return `🔍 **Analisando seus dados...**\n\nCruzei sua pergunta — **"${question}"** — com ${panelsLabel(ctx)} e com o histórico dos últimos 12 meses.\n\nEncontrei sinais relevantes em mais de um painel, o que indica fatores inter-relacionados. Para uma leitura mais precisa sobre esse ponto específico, vale conectar a fonte de dados relacionada em Integrações.\n\n💡 **Sugestão:** reformule citando a métrica que você quer entender (faturamento, margem, CAC, churn, conversão) — assim consigo trazer números e uma recomendação direta.`
 }
 
 // Converte o texto da resposta em elementos: negrito, listas, tabelas e títulos.
@@ -99,7 +134,7 @@ function formatMessage(text: string) {
 const WELCOME = 'Olá, João. Eu leio continuamente as suas fontes conectadas e consigo responder sobre o seu negócio em linguagem natural — sem fórmula, sem consulta técnica.\n\nO que você quer entender hoje?'
 
 export default function AIAssistant() {
-  const { pendingQuestion, clearPendingQuestion, sources, insights } = useAtlas()
+  const { pendingQuestion, clearPendingQuestion, sources, insights, panels } = useAtlas()
   const [messages, setMessages] = useState<Message[]>([
     { id: 0, role: 'assistant', timestamp: 'Agora', text: WELCOME },
   ])
@@ -123,7 +158,7 @@ export default function AIAssistant() {
     setTyping(true)
     setTimeout(() => {
       setTyping(false)
-      const reply: Message = { id: Date.now() + 1, role: 'assistant', text: getResponse(q), timestamp: 'Agora' }
+      const reply: Message = { id: Date.now() + 1, role: 'assistant', text: getResponse(q, { panelNames: panels.map(p => p.name), hasBudget: panels.some(p => p.templateId === 'orcamento') }), timestamp: 'Agora' }
       setMessages(prev => [...prev, reply])
     }, 1500 + Math.random() * 700)
   }

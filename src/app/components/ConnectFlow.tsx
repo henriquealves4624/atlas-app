@@ -167,7 +167,7 @@ function UploadForm({ onSubmit }: { onSubmit: () => void }) {
   const [file, setFile] = useState<string | null>(null)
   return (
     <>
-      <div onClick={() => setFile('vendas-2026.xlsx')}
+      <div onClick={() => setFile('orcado-x-realizado-2026.xlsx')}
         style={{ border: `1.5px dashed ${file ? 'rgba(52,211,153,0.4)' : 'rgba(139,92,246,0.28)'}`, borderRadius: 14, padding: '30px 22px', textAlign: 'center', cursor: 'pointer', background: file ? 'rgba(52,211,153,0.04)' : 'rgba(139,92,246,0.04)', transition: 'all 0.25s' }}>
         {file ? (
           <>

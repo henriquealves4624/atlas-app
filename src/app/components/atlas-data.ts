@@ -5,7 +5,7 @@
 export type Priority = 'alta' | 'media' | 'baixa'
 export type InsightType = 'alerta' | 'oportunidade' | 'tendencia'
 export type InsightStatus = 'gerado' | 'backlog' | 'andamento' | 'concluido' | 'descartado'
-export type TemplateId = 'comercial' | 'financeiro' | 'clientes' | 'marketing'
+export type TemplateId = 'comercial' | 'financeiro' | 'clientes' | 'marketing' | 'orcamento'
 export type ConnectMethod = 'upload' | 'google' | 'login' | 'powerbi' | 'token'
 
 // ── Fontes de dados e ferramentas de visualização ───────────────────────────
@@ -137,6 +137,20 @@ export const conversionByChannel = [
   { canal: 'Social', taxa: 2.1 }, { canal: 'Mídia paga', taxa: 2.4 },
 ]
 
+// Orçado x realizado (valores em milhares de reais)
+export const budgetMonthly = [
+  { m: 'Jan', orcado: 380, realizado: 392 }, { m: 'Fev', orcado: 390, realizado: 401 },
+  { m: 'Mar', orcado: 410, realizado: 362 }, { m: 'Abr', orcado: 405, realizado: 398 },
+  { m: 'Mai', orcado: 420, realizado: 404 }, { m: 'Jun', orcado: 430, realizado: 384 },
+  { m: 'Jul', orcado: 425, realizado: 396 }, { m: 'Ago', orcado: 440, realizado: 412 },
+]
+
+export const budgetBySeller = [
+  { name: 'Ana Souza', value: 96 }, { name: 'Carla Mendes', value: 78 },
+  { name: 'Bruno Lima', value: 61 }, { name: 'Diego Rocha', value: 54 },
+  { name: 'Demais vendedores', value: 123 },
+]
+
 // ── Templates de painel ─────────────────────────────────────────────────────
 
 export interface Kpi {
@@ -197,6 +211,19 @@ export const TEMPLATES: Record<TemplateId, PanelTemplate> = {
       { label: 'Leads gerados', value: '3.580', change: '+9,1%', up: true, spark: [2400, 2610, 2580, 2890, 3040, 3120, 3240, 3180, 3310, 3420, 3510, 3580] },
       { label: 'Custo por lead', value: 'R$ 94', change: '+11,2%', up: false, spark: [72, 74, 71, 78, 80, 82, 79, 84, 88, 90, 92, 94] },
       { label: 'Retorno sobre mídia', value: '3,4x', change: '-0,3x', up: false, spark: [4.1, 4, 3.9, 4.2, 3.8, 3.9, 3.7, 3.8, 3.6, 3.5, 3.5, 3.4] },
+    ],
+  },
+  orcamento: {
+    id: 'orcamento',
+    label: 'Orçamento',
+    summary: 'Orçado versus realizado por mês e por vendedor',
+    kpis: [
+      { label: 'Realizado no mês', value: 'R$ 412K', change: '-6,4% vs orçado', up: false, spark: [392, 401, 362, 398, 404, 384, 396, 412] },
+      { label: 'Orçado no mês', value: 'R$ 440K', change: '+3,5%', up: true, spark: [380, 390, 410, 405, 420, 430, 425, 440] },
+      { label: 'Atingimento do orçamento', value: '93,6%', change: '+0,4pp', up: true, spark: [103.2, 102.8, 88.3, 98.3, 96.2, 89.3, 93.2, 93.6] },
+      { label: 'Desvio acumulado no ano', value: '-R$ 151K', change: '-R$ 28K', up: false, spark: [12, 23, -25, -32, -48, -94, -123, -151] },
+      { label: 'Vendedores acima da meta', value: '1 de 5', change: '-1 vs mês ant.', up: false, spark: [4, 4, 2, 3, 2, 1, 2, 1] },
+      { label: 'Projeção de fechamento do ano', value: '95%', change: '-1,2pp', up: false, spark: [103, 103, 98, 98, 98, 96, 96, 95] },
     ],
   },
 }
@@ -307,9 +334,42 @@ export const INSIGHT_POOL: Record<TemplateId, InsightSeed[]> = {
       impact: 'R$ 4,4K por mês de potencial', priority: 'baixa', type: 'tendencia', category: 'Campanha', metric: 'Retorno sobre mídia',
     },
   ],
+  orcamento: [
+    {
+      title: 'Realizado ficou 6,4% abaixo do orçado no mês',
+      summary: 'O mês fechou em R$ 412K contra R$ 440K orçados. Bruno Lima e Diego Rocha somam R$ 37K abaixo das suas metas.',
+      recommendation: 'Revise o pipeline desses dois vendedores e redistribua as oportunidades paradas antes do fechamento do próximo mês.',
+      impact: 'R$ 28K abaixo do orçado', priority: 'alta', type: 'alerta', category: 'Orçamento', metric: 'Atingimento do orçamento',
+    },
+    {
+      title: 'Resultado está abaixo do orçado desde março',
+      summary: 'O desvio acumulado no ano chega a R$ 151K (4,6%). Mantido o ritmo, o ano fecha em cerca de 95% do orçamento.',
+      recommendation: 'Revise a projeção do segundo semestre e defina ações comerciais para recuperar parte do desvio até dezembro.',
+      impact: 'R$ 151K de desvio acumulado', priority: 'alta', type: 'alerta', category: 'Orçamento', metric: 'Desvio acumulado',
+    },
+    {
+      title: 'Ana Souza entregou 117% do orçado no mês',
+      summary: 'É o quinto mês seguido acima da meta, com ticket médio 22% maior que o restante do time.',
+      recommendation: 'Documente a abordagem comercial dela e replique com os vendedores que estão abaixo da meta.',
+      impact: 'R$ 14K acima da meta', priority: 'media', type: 'oportunidade', category: 'Equipe', metric: 'Realizado por vendedor',
+    },
+    {
+      title: 'Março e junho concentram os maiores desvios do ano',
+      summary: 'Os dois meses ficaram mais de 10% abaixo do orçado e repetem o padrão sazonal observado no ano anterior.',
+      recommendation: 'Ajuste o orçamento desses meses à sazonalidade real para ter metas mais realistas no próximo ciclo.',
+      impact: 'R$ 94K concentrados em 2 meses', priority: 'baixa', type: 'tendencia', category: 'Orçamento', metric: 'Realizado por mês',
+    },
+  ],
 }
 
-export const CATEGORIES = ['Receita', 'Custos', 'Preço', 'Vendas', 'Conversão', 'Aquisição', 'Retenção', 'Campanha', 'Produto', 'Operacional']
+export const CATEGORIES = ['Orçamento', 'Receita', 'Custos', 'Preço', 'Vendas', 'Conversão', 'Aquisição', 'Retenção', 'Campanha', 'Produto', 'Equipe', 'Operacional']
+
+// Painéis criados no Atlas: o tipo de leitura da IA vem do que o usuário montou.
+export function inferTemplate(texts: string[]): TemplateId {
+  const text = texts.join(' ').toLowerCase()
+  if (/or[çc]ad|realizad|or[çc]amento|vendedor|desvio/.test(text)) return 'orcamento'
+  return 'financeiro'
+}
 
 // ── Perfil do usuário ───────────────────────────────────────────────────────
 

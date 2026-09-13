@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Plus, Plug, LayoutDashboard, Sparkles, ArrowUpRight, ArrowDownRight, Check, RefreshCw,
+  Plus, Plug, LayoutDashboard, Sparkles, ArrowUpRight, ArrowDownRight, Check, RefreshCw, ChevronDown,
 } from 'lucide-react'
 import { C } from './atlas-tokens'
 import {
@@ -19,6 +19,7 @@ export default function PanelsPage() {
     activeProject, setActiveProject, activePanel, setActivePanel, analyzingPanelId,
   } = useAtlas()
   const [triage, setTriage] = useState<Insight | null>(null)
+  const [showAllKpis, setShowAllKpis] = useState(false)
 
   const project = useMemo(
     () => projects.find(p => p.id === activeProject) ?? projects[0] ?? null,
@@ -40,6 +41,8 @@ export default function PanelsPage() {
     if (!panel && activePanel) setActivePanel(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.id, panel?.id])
+
+  useEffect(() => { setShowAllKpis(false) }, [panel?.id])
 
   if (projects.length === 0) {
     return (
@@ -186,8 +189,8 @@ export default function PanelsPage() {
             <Reveal delay={160} style={{ marginBottom: 30 }}>
               <SectionHeading title="Indicadores principais" />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(212px, 1fr))', gap: 12 }}>
-                {template.kpis.map(k => (
-                  <Card key={k.label} padding={18} hover>
+                {(showAllKpis ? template.kpis : template.kpis.slice(0, 4)).map((k, i) => (
+                  <Card key={k.label} padding={18} hover className={i >= 4 ? 'insight-in' : ''}>
                     <div style={{ color: C.textSubtle, fontSize: 12.5, marginBottom: 10 }}>{k.label}</div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
                       <div>
@@ -202,6 +205,14 @@ export default function PanelsPage() {
                   </Card>
                 ))}
               </div>
+              {template.kpis.length > 4 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                  <GhostButton onClick={() => setShowAllKpis(v => !v)}
+                    icon={<ChevronDown size={14} style={{ transform: showAllKpis ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}>
+                    {showAllKpis ? 'Ver menos' : 'Ver mais'}
+                  </GhostButton>
+                </div>
+              )}
             </Reveal>
           )}
 
@@ -215,7 +226,7 @@ export default function PanelsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
                 {panel.charts.map(chart => (
                   <ChartCard key={chart.id} title={chart.title} subtitle={chart.fieldY}>
-                    <CustomChartRender type={chart.type} label={chart.fieldY} />
+                    <CustomChartRender type={chart.type} label={chart.fieldY} title={chart.title} fieldX={chart.fieldX} />
                   </ChartCard>
                 ))}
               </div>

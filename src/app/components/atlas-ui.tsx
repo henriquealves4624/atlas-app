@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Check, Clock, Inbox, Archive, Layers } from 'lucide-react'
+import { ChevronDown, Check, Clock, Inbox, Archive, Layers, LayoutDashboard } from 'lucide-react'
 import { C } from './atlas-tokens'
 import markUrl from '../../assets/atlas-mark.png'
 import fullUrl from '../../assets/atlas-logo-full.png'
@@ -58,8 +58,8 @@ export function CountUp({ value, prefix = '', suffix = '', decimals = 0, duratio
 
 // ── Sparkline ───────────────────────────────────────────────────────────────
 
-export function Sparkline({ values, color = C.purpleLight, width = 120, height = 34, fill = true, strokeWidth = 2 }: {
-  values: number[]; color?: string; width?: number; height?: number; fill?: boolean; strokeWidth?: number
+export function Sparkline({ values, color = C.purpleLight, width = 120, height = 34, fill = true, strokeWidth = 2, responsive = false }: {
+  values: number[]; color?: string; width?: number; height?: number; fill?: boolean; strokeWidth?: number; responsive?: boolean
 }) {
   const min = Math.min(...values)
   const max = Math.max(...values)
@@ -75,7 +75,8 @@ export function Sparkline({ values, color = C.purpleLight, width = 120, height =
   const gid = `sk-${color.replace(/[^a-z0-9]/gi, '')}-${width}-${height}`
 
   return (
-    <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
+    <svg width={responsive ? '100%' : width} height={height} viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio={responsive ? 'none' : undefined} style={{ display: 'block', overflow: 'visible' }}>
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.24" />
@@ -86,6 +87,17 @@ export function Sparkline({ values, color = C.purpleLight, width = 120, height =
       <path d={line} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
         pathLength={1} className="atlas-spark-line" />
     </svg>
+  )
+}
+
+// ── Origem do insight ───────────────────────────────────────────────────────
+
+export function PanelTag({ name }: { name: string }) {
+  return (
+    <span title={name} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: '100%', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: C.purpleLight, borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 500, lineHeight: 1.5 }}>
+      <LayoutDashboard size={10} style={{ flexShrink: 0 }} />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+    </span>
   )
 }
 

@@ -5,7 +5,7 @@ import {
 import { C } from './atlas-tokens'
 import {
   Reveal, Card, Segmented, ContextSelector, EmptyState, PrimaryButton, GhostButton,
-  STATUS_META, PRIORITY_META, TYPE_META, shortDate,
+  STATUS_META, PRIORITY_META, TYPE_META, PanelTag, shortDate,
 } from './atlas-ui'
 import InsightCard from './InsightCard'
 import { TriageModal, ConclusionModal } from './InsightTriage'
@@ -195,6 +195,7 @@ function KanbanView({ insights, onTriage, onConclude }: {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(258px, 1fr))', gap: 10, padding: '0 18px 18px' }}>
               {generated.map(insight => (
                 <div key={insight.id} style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${C.borderSubtle}`, borderLeft: `2px solid ${TYPE_META[insight.type].color}`, borderRadius: 11, padding: '13px 15px' }}>
+                  <OriginTag insight={insight} />
                   <div style={{ color: C.text, fontSize: 13.5, fontWeight: 600, lineHeight: 1.45, marginBottom: 6 }}>{insight.title}</div>
                   <div style={{ color: C.textSubtle, fontSize: 12, marginBottom: 11 }}>{insight.impact}</div>
                   <button onClick={() => onTriage(insight)} className="atlas-btn-primary"
@@ -255,8 +256,7 @@ function KanbanView({ insights, onTriage, onConclude }: {
 function KanbanCard({ insight, dragging, onDragStart, onDragEnd }: {
   insight: Insight; dragging: boolean; onDragStart: () => void; onDragEnd: () => void
 }) {
-  const { projects, panels } = useAtlas()
-  const project = projects.find(p => p.id === insight.projectId)
+  const { panels } = useAtlas()
   const panel = panels.find(p => p.id === insight.panelId)
   const prio = PRIORITY_META[insight.priority]
 
@@ -264,19 +264,22 @@ function KanbanCard({ insight, dragging, onDragStart, onDragEnd }: {
     <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
       className={`kanban-card${dragging ? ' dragging' : ''}`}
       style={{ background: 'rgba(20,16,38,0.9)', border: `1px solid ${C.border}`, borderRadius: 11, padding: '13px 14px' }}>
+      {panel && <div style={{ marginBottom: 8 }}><PanelTag name={panel.name} /></div>}
       <div style={{ color: C.text, fontSize: 13, fontWeight: 600, lineHeight: 1.45, marginBottom: 9 }}>{insight.title}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
         <span style={{ color: prio.color, fontSize: 11.5, fontWeight: 600 }}>{prio.label}</span>
         <span style={{ color: C.textSubtle, opacity: 0.45 }}>·</span>
         <span style={{ color: C.textSubtle, fontSize: 11.5 }}>{insight.category}</span>
       </div>
-      {(project || panel) && (
-        <div style={{ color: C.textSubtle, fontSize: 11.5, marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {project?.name}{panel ? ` · ${panel.name}` : ''}
-        </div>
-      )}
     </div>
   )
+}
+
+function OriginTag({ insight }: { insight: Insight }) {
+  const { panels } = useAtlas()
+  const panel = panels.find(p => p.id === insight.panelId)
+  if (!panel) return null
+  return <div style={{ marginBottom: 8 }}><PanelTag name={panel.name} /></div>
 }
 
 // ── Lista / relatório ───────────────────────────────────────────────────────

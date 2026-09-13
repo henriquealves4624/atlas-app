@@ -286,7 +286,26 @@
 .bar-grow { animation: bar-grow 1.1s cubic-bezier(0.22, 1, 0.36, 1); }
 
 /* ── Responsivo ──────────────────────────────────────────────────────────── */
-@media (max-width: 1080px) {
+/* Autenticação: duas colunas com a mesma altura */
+.login-grid {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1060px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+  gap: clamp(40px, 6vw, 96px);
+  align-items: stretch;
+}
+.login-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(20px, 3vh, 32px);
+  min-width: 0;
+}
+@media (max-width: 960px) {
+  .login-grid { grid-template-columns: minmax(0, 400px); justify-content: center; }
   .atlas-login-side { display: none !important; }
 }
 

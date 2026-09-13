@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { Sparkles, Wand2 } from 'lucide-react'
@@ -9,7 +9,7 @@ import { Modal, ModalHeader } from './atlas-ui'
 import {
   revenueData, marginData, expenseData, costPieData, weeklySales, conversionData,
   productSales, customerGrowth, retentionData, segmentsPie, channelLeads,
-  campaignPerformance, conversionByChannel, type TemplateId,
+  campaignPerformance, conversionByChannel, budgetMonthly, budgetBySeller, type TemplateId,
 } from './atlas-data'
 
 const axis = { fill: C.textSubtle, fontSize: 11 }
@@ -71,6 +71,7 @@ export function TemplateCharts({ templateId }: { templateId: TemplateId }) {
   if (templateId === 'financeiro') return <FinanceCharts />
   if (templateId === 'comercial') return <SalesCharts />
   if (templateId === 'clientes') return <CustomerCharts />
+  if (templateId === 'orcamento') return <BudgetCharts />
   return <MarketingCharts />
 }
 
@@ -344,29 +345,91 @@ const barMock = [{ n: 'Jan', v: 42 }, { n: 'Fev', v: 61 }, { n: 'Mar', v: 47 }, 
 const lineMock = [{ n: 'Jan', v: 35 }, { n: 'Fev', v: 52 }, { n: 'Mar', v: 44 }, { n: 'Abr', v: 68 }, { n: 'Mai', v: 61 }, { n: 'Jun', v: 74 }]
 const pieMock = [{ name: 'Categoria A', value: 40 }, { name: 'Categoria B', value: 33 }, { name: 'Categoria C', value: 27 }]
 
-export function CustomChartRender({ type, height = 200, label }: { type: string; height?: number; label?: string }) {
+// Uma planilha de orçado x realizado é reconhecida pelos nomes do gráfico e dos campos.
+function readsBudget(...texts: (string | undefined)[]) {
+  return /or[çc]ad|realizad|or[çc]amento|vendedor|desvio/.test(texts.filter(Boolean).join(' ').toLowerCase())
+}
+
+const MoneyTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{ background: 'rgba(13,10,24,0.97)', border: '1px solid rgba(139,92,246,0.28)', borderRadius: 9, padding: '9px 13px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+      {label && <p style={{ color: C.textSubtle, fontSize: 11, marginBottom: 5 }}>{label}</p>}
+      {payload.map((p: any, i: number) => (
+        <p key={i} style={{ color: p.color || C.text, fontSize: 13, fontWeight: 500 }}>{p.name}: R$ {p.value}K</p>
+      ))}
+    </div>
+  )
+}
+
+export function CustomChartRender({ type, height = 200, label, title, fieldX }: {
+  type: string; height?: number; label?: string; title?: string; fieldX?: string
+}) {
+  const budget = readsBudget(title, fieldX, label)
+  const bySeller = /vendedor/.test(`${title ?? ''} ${fieldX ?? ''}`.toLowerCase())
+  const compact = height < 160
+
   if (type === 'kpi') {
     return (
-      <div style={{ height, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <div style={{ color: C.text, fontSize: 38, fontWeight: 750, letterSpacing: '-0.035em' }}>R$ 82K</div>
-        <div style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>+8,2% vs mês anterior</div>
-        {label && <div style={{ color: C.textSubtle, fontSize: 12 }}>{label}</div>}
+      <div style={{ height, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+        <div style={{ color: C.text, fontSize: compact ? 32 : 38, fontWeight: 750, letterSpacing: '-0.035em' }}>{budget ? 'R$ 412K' : 'R$ 82K'}</div>
+        <div style={{ color: budget ? C.red : C.green, fontSize: 13, fontWeight: 600 }}>{budget ? '-6,4% vs orçado' : '+8,2% vs mês anterior'}</div>
+        <div style={{ color: C.textSubtle, fontSize: 12 }}>{budget ? 'Orçado: R$ 440K · 93,6% atingido' : label}</div>
       </div>
     )
   }
+
   if (type === 'pie') {
+    const data = budget ? budgetBySeller : pieMock
     return (
       <ResponsiveContainer width="100%" height={height}>
         <PieChart>
-          <Pie data={pieMock} cx="50%" cy="50%" innerRadius={height * 0.2} outerRadius={height * 0.34} dataKey="value" paddingAngle={4}>
-            {pieMock.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
+          <Pie data={data} cx="50%" cy={budget ? '44%' : '50%'} innerRadius={height * 0.2} outerRadius={height * 0.34} dataKey="value" paddingAngle={3}>
+            {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
           </Pie>
-          <Tooltip content={<TooltipBox />} />
+          <Tooltip content={budget ? <MoneyTooltip /> : <TooltipBox />} />
           <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11, color: C.textMuted }} />
         </PieChart>
       </ResponsiveContainer>
     )
   }
+
+  if (budget && bySeller) {
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart data={budgetBySeller} margin={{ top: 4, right: 6, left: -14, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+          <XAxis dataKey="name" tick={axis} />
+          <YAxis tick={axis} tickFormatter={v => `R$${v}K`} />
+          <Tooltip content={<MoneyTooltip />} />
+          <Bar dataKey="value" name="Realizado" fill="#a78bfa" radius={[5, 5, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (budget) {
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <ComposedChart data={budgetMonthly} margin={{ top: 4, right: 6, left: -14, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+          <XAxis dataKey="m" tick={axis} />
+          <YAxis tick={axis} tickFormatter={v => `R$${v}K`} />
+          <Tooltip content={<MoneyTooltip />} />
+          {!compact && <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11, color: C.textMuted }} />}
+          {type === 'line' ? (
+            <Line type="monotone" dataKey="realizado" name="Realizado" stroke="#a78bfa" strokeWidth={2.5} dot={false} />
+          ) : (
+            <Bar dataKey="realizado" name="Realizado" fill="#a78bfa" radius={[5, 5, 0, 0]}>
+              {budgetMonthly.map((d, i) => <Cell key={i} fill={d.realizado >= d.orcado ? '#34d399' : '#a78bfa'} />)}
+            </Bar>
+          )}
+          <Line type="monotone" dataKey="orcado" name="Orçado" stroke="#fb923c" strokeWidth={2} strokeDasharray="5 4" dot={false} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    )
+  }
+
   if (type === 'line') {
     return (
       <ResponsiveContainer width="100%" height={height}>
@@ -380,6 +443,7 @@ export function CustomChartRender({ type, height = 200, label }: { type: string;
       </ResponsiveContainer>
     )
   }
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={barMock} margin={{ top: 4, right: 6, left: -22, bottom: 0 }}>
@@ -390,5 +454,20 @@ export function CustomChartRender({ type, height = 200, label }: { type: string;
         <Bar dataKey="v" name={label || 'Valor'} fill="#a78bfa" radius={[5, 5, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
+  )
+}
+
+function BudgetCharts() {
+  return (
+    <div style={gridWide}>
+      <ChartCard title="Realizado por mês" subtitle="Realizado vs orçado, em milhares de reais"
+        reading="O realizado ficou abaixo do orçado em todos os meses desde março. Março e junho concentram os maiores desvios, ambos acima de 10%.">
+        <CustomChartRender type="bar" title="Realizado por mês" />
+      </ChartCard>
+      <ChartCard title="Realizado por vendedor"
+        reading="Ana Souza responde pela maior fatia do realizado e é a única vendedora acima da meta no mês.">
+        <CustomChartRender type="pie" title="Realizado por vendedor" />
+      </ChartCard>
+    </div>
   )
 }

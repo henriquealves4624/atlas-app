@@ -12,6 +12,8 @@ import App from './App'
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, value: 800 })
   Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 400 })
+  // jsdom não implementa rolagem de elementos
+  Element.prototype.scrollIntoView = () => {}
   globalThis.ResizeObserver = class {
     observe() {} unobserve() {} disconnect() {}
   } as never
@@ -148,4 +150,63 @@ describe('jornada do Atlas', () => {
     await user.click(screen.getByRole('button', { name: /Lista/i }))
     expect(screen.getByRole('button', { name: /Exportar CSV/i })).toBeTruthy()
   }, 40000)
+
+  it('monta o painel Orçado X Realizado com insights, indicadores e resposta da IA coerentes', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await login(user)
+
+    // Planilha de orçado x realizado
+    await user.click(screen.getAllByRole('button', { name: /^Conectar dados$/i })[0])
+    await waitFor(() => expect(screen.getByText('Excel / CSV')).toBeTruthy())
+    await user.click(screen.getAllByRole('button', { name: /^Conectar$/i })[0])
+    await user.click(await screen.findByText(/Selecionar arquivo/i))
+    expect(screen.getByText(/orcado-x-realizado-2026\.xlsx/i)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /Importar arquivo/i }))
+    await waitFor(() => expect(screen.getByText(/Seus dados estão conectados/i)).toBeTruthy(), { timeout: 8000 })
+    await user.click(screen.getByRole('button', { name: /Construir painel/i }))
+
+    // Painel com os três gráficos da demonstração
+    await user.type(await screen.findByPlaceholderText(/Dê um nome ao painel/i), 'Orçado X Realizado')
+    const addChart = async (button: RegExp, title: string) => {
+      await user.click(screen.getByRole('button', { name: button }))
+      const inputs = screen.getAllByDisplayValue(/^(Gráfico de|KPI \/ Card)/i)
+      const input = inputs[inputs.length - 1]
+      await user.clear(input)
+      await user.type(input, title)
+    }
+    await addChart(/Gráfico de barras/i, 'Realizado por mês')
+    await addChart(/Gráfico de pizza/i, 'Realizado por vendedor')
+    await addChart(/KPI \/ Card/i, 'Realizado no mês')
+
+    await user.click(screen.getByRole('button', { name: /Publicar painel/i }))
+    await user.type(await screen.findByPlaceholderText(/Ex.: Financeiro/i), 'Financeiro')
+    const publish = screen.getAllByRole('button', { name: /Publicar painel/i })
+    await user.click(publish[publish.length - 1])
+
+    // Insights e indicadores falam de orçamento, não de faturamento genérico
+    await waitFor(
+      () => expect(screen.getByText(/Realizado ficou 6,4% abaixo do orçado no mês/i)).toBeTruthy(),
+      { timeout: 10000 },
+    )
+    expect(screen.queryByText(/Faturamento caiu 8%/i)).toBeNull()
+    expect(screen.getByText('Atingimento do orçamento')).toBeTruthy()
+    expect(screen.queryByText('Vendedores acima da meta')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /Ver mais/i }))
+    expect(screen.getByText('Vendedores acima da meta')).toBeTruthy()
+    expect(screen.getByText('Projeção de fechamento do ano')).toBeTruthy()
+
+    // Tag do painel na Central
+    await user.click(screen.getByRole('button', { name: /Central de Insights/i }))
+    await user.click(screen.getByRole('button', { name: /Kanban/i }))
+    expect(screen.getAllByTitle('Orçado X Realizado').length).toBeGreaterThan(0)
+
+    // Pergunta usada no vídeo
+    await user.click(screen.getAllByRole('button', { name: /Perguntar ao Atlas/i })[0])
+    const question = await screen.findByPlaceholderText(/Pergunte ao Atlas sobre seus dados/i)
+    await user.type(question, 'Quero saber o que aconteceu com o faturamento da empresa no último mês{enter}')
+    await waitFor(() => expect(screen.getByText(/O que aconteceu no último mês/i)).toBeTruthy(), { timeout: 6000 })
+    expect(screen.getAllByText(/R\$ 412K/).length).toBeGreaterThan(0)
+  }, 60000)
 })

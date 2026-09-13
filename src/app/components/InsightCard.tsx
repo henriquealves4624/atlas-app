@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Play, Check, RotateCcw, BarChart3, MessageSquare } from 'lucide-react'
 import { C } from './atlas-tokens'
-import { TYPE_META, PRIORITY_META, STATUS_META, relativeTime } from './atlas-ui'
+import { TYPE_META, PRIORITY_META, STATUS_META, PanelTag, relativeTime } from './atlas-ui'
 import { useAtlas, type Insight } from '../store'
 
 interface Props {
@@ -54,6 +54,9 @@ export default function InsightCard({
         <span style={{ marginLeft: 'auto', color: C.textSubtle, fontSize: 12 }}>{relativeTime(insight.createdAt)}</span>
       </div>
 
+      {showOrigin && panel && (
+        <div style={{ marginBottom: 8 }}><PanelTag name={panel.name} /></div>
+      )}
       <h3 style={{ color: C.text, fontSize: 15.5, fontWeight: 600, lineHeight: 1.4, letterSpacing: '-0.01em', marginBottom: 7 }}>
         {insight.title}
       </h3>
@@ -117,7 +120,6 @@ export default function InsightCard({
             <>
               {insight.status !== 'gerado' && <span style={{ opacity: 0.45 }}>·</span>}
               <span>{project.name}</span>
-              {panel && <><span style={{ opacity: 0.45 }}>·</span><span>{panel.name}</span></>}
             </>
           )}
         </div>

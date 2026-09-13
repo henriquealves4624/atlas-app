@@ -9,7 +9,7 @@ import {
 } from './atlas-ui'
 import { CustomChartRender } from './PanelCharts'
 import { useAtlas, type CustomChart } from '../store'
-import { SOURCE_CATALOG } from './atlas-data'
+import { SOURCE_CATALOG, inferTemplate } from './atlas-data'
 
 type ChartType = 'bar' | 'line' | 'pie' | 'kpi'
 
@@ -20,7 +20,7 @@ const CHART_BUTTONS: { type: ChartType; label: string; icon: React.ReactNode }[]
   { type: 'kpi', label: 'KPI / Card', icon: <Hash size={16} /> },
 ]
 
-const FIELDS = ['Data', 'Receita', 'Produto', 'Categoria', 'Quantidade', 'Cliente', 'Margem', 'Custo']
+const FIELDS = ['Mês', 'Realizado', 'Orçado', 'Desvio', 'Vendedor', 'Categoria', 'Data', 'Receita', 'Produto', 'Quantidade', 'Cliente', 'Margem', 'Custo']
 
 // Visualização sugerida pela Atlas IA quando o usuário não sabe por onde começar.
 const AI_CHARTS: Omit<CustomChart, 'id'>[] = [
@@ -212,7 +212,8 @@ function PublishModal({ name, charts, sourceLabel, onClose }: {
     const panel = createPanel({
       name,
       projectId: id,
-      templateId: 'financeiro',
+      // A leitura da IA segue o que o painel mostra (ex.: orçado x realizado).
+      templateId: inferTemplate([name, ...charts.flatMap(c => [c.title, c.fieldX, c.fieldY])]),
       origin: 'atlas',
       originLabel: sourceLabel,
       charts,
@@ -285,7 +286,7 @@ function ChartConfig({ chart, active, onClick, onUpdate, onRemove }: {
           <div>
             <div style={{ color: C.textSubtle, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Pré-visualização</div>
             <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.borderSubtle}`, borderRadius: 11, padding: '10px 8px' }}>
-              <CustomChartRender type={chart.type} height={130} label={chart.fieldY} />
+              <CustomChartRender type={chart.type} height={130} label={chart.fieldY} title={chart.title} fieldX={chart.fieldX} />
             </div>
           </div>
         </div>

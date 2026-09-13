@@ -31,56 +31,64 @@ export default function LoginPage({ onEnter }: { onEnter: () => void }) {
   const submit = () => { setStep(0); setLoading(true) }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', padding: '40px 32px' }}>
+    <div style={{
+      minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      position: 'relative', overflow: 'hidden', boxSizing: 'border-box',
+      padding: 'clamp(24px, 5vh, 56px) clamp(20px, 4vw, 56px)',
+    }}>
       <div className="atlas-glow" style={{ position: 'absolute', top: '-12%', left: '8%', width: 520, height: 520, borderRadius: '50%', background: 'rgba(139,92,246,0.09)', filter: 'blur(120px)', pointerEvents: 'none' }} />
       <div className="atlas-glow" style={{ position: 'absolute', bottom: '-14%', right: '8%', width: 440, height: 440, borderRadius: '50%', background: 'rgba(59,130,246,0.07)', filter: 'blur(110px)', pointerEvents: 'none', animationDelay: '2s' }} />
 
-      <div style={{
-        position: 'relative', zIndex: 1, width: '100%', maxWidth: 1080,
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
-        gap: 60, alignItems: 'center',
-      }}>
-        {/* ── Apresentação ────────────────────────────────────────────────── */}
-        <div className="atlas-reveal atlas-login-side">
-          <AtlasLogoFull width={118} />
+      <div className="login-grid">
+        {/* ── Apresentação: topo alinhado ao topo do card, base à base ───── */}
+        <section className="atlas-login-side login-side">
+          <div className="atlas-reveal">
+            <AtlasLogoFull width={72} />
 
-          <h1 style={{ color: C.text, fontSize: 38, fontWeight: 750, letterSpacing: '-0.038em', lineHeight: 1.13, margin: '26px 0 18px' }}>
-            Pare de apenas olhar dados.<br />
-            <span className="gradient-text">Comece a decidir.</span>
-          </h1>
+            <h1 style={{
+              color: C.text, fontWeight: 750, letterSpacing: '-0.038em', lineHeight: 1.13,
+              fontSize: 'clamp(28px, calc(1.1vw + 1.7vh + 5px), 38px)',
+              margin: 'clamp(18px, 2.8vh, 30px) 0 clamp(10px, 1.6vh, 16px)',
+            }}>
+              Pare de apenas olhar dados.<br />
+              <span className="gradient-text">Comece a decidir.</span>
+            </h1>
 
-          <p style={{ color: C.textMuted, fontSize: 15.5, lineHeight: 1.7, marginBottom: 32, maxWidth: 440 }}>
-            O Atlas conecta as ferramentas que sua empresa já usa, encontra o que mudou nos seus números
-            e transforma isso em ações claras.
-          </p>
+            <p style={{ color: C.textMuted, fontSize: 'clamp(13.5px, calc(0.9vh + 5.5px), 15px)', lineHeight: 1.68, maxWidth: 470, marginBottom: 'clamp(16px, 2.8vh, 28px)' }}>
+              O Atlas conecta as ferramentas que sua empresa já usa, encontra o que mudou nos seus números
+              e transforma isso em ações claras.
+            </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 15, marginBottom: 34 }}>
-            {STEPS.map((s, i) => (
-              <div key={s.title} className="atlas-reveal" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', animationDelay: `${140 + i * 90}ms` }}>
-                <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purpleLight, flexShrink: 0, marginTop: 1 }}>
-                  {s.icon}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(9px, 1.5vh, 14px)' }}>
+              {STEPS.map((s, i) => (
+                <div key={s.title} className="atlas-reveal" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', animationDelay: `${140 + i * 90}ms` }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purpleLight, flexShrink: 0 }}>
+                    {s.icon}
+                  </div>
+                  <div>
+                    <div style={{ color: C.text, fontSize: 'clamp(13px, calc(0.5vh + 8.5px), 14px)', fontWeight: 600, marginBottom: 2 }}>{s.title}</div>
+                    <div style={{ color: C.textSubtle, fontSize: 'clamp(12px, calc(0.5vh + 8px), 13px)', lineHeight: 1.5 }}>{s.desc}</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ color: C.text, fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{s.title}</div>
-                  <div style={{ color: C.textSubtle, fontSize: 13, lineHeight: 1.55 }}>{s.desc}</div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <InsightPreview />
-        </div>
+        </section>
 
         {/* ── Autenticação ────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <section style={{ minWidth: 0 }}>
           <div className="atlas-fade-up" style={{
-            width: '100%', maxWidth: 400, background: 'rgba(17,13,32,0.8)', backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(139,92,246,0.2)', borderRadius: 22, padding: '36px 32px',
+            height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            background: 'rgba(17,13,32,0.8)', backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(139,92,246,0.2)', borderRadius: 22,
+            padding: 'clamp(26px, 4vh, 36px) clamp(24px, 2.4vw, 32px)',
             boxShadow: '0 0 60px rgba(139,92,246,0.1), 0 24px 64px rgba(0,0,0,0.55)', position: 'relative',
           }}>
             <div style={{ position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)', width: 170, height: 2, background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.55), transparent)', borderRadius: 4 }} />
 
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 'clamp(16px, 2.6vh, 24px)' }}>
               <h2 style={{ color: C.text, fontSize: 21, fontWeight: 700, letterSpacing: '-0.022em', marginBottom: 6 }}>
                 {mode === 'login' ? 'Entrar na sua conta' : 'Criar sua conta'}
               </h2>
@@ -89,7 +97,7 @@ export default function LoginPage({ onEnter }: { onEnter: () => void }) {
               </p>
             </div>
 
-            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.035)', borderRadius: 11, padding: 3, marginBottom: 22, border: `1px solid ${C.borderSubtle}` }}>
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.035)', borderRadius: 11, padding: 3, marginBottom: 'clamp(14px, 2.4vh, 22px)', border: `1px solid ${C.borderSubtle}` }}>
               {(['login', 'register'] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
                   style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13.5, background: mode === m ? 'rgba(139,92,246,0.18)' : 'transparent', color: mode === m ? C.purpleLight : C.textMuted, fontWeight: mode === m ? 600 : 450, transition: 'all 0.2s' }}>
@@ -99,17 +107,17 @@ export default function LoginPage({ onEnter }: { onEnter: () => void }) {
             </div>
 
             <button onClick={submit} className="atlas-btn-ghost"
-              style={{ width: '100%', padding: '11px 0', borderRadius: 11, color: C.text, cursor: 'pointer', fontSize: 13.5, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 18 }}>
+              style={{ width: '100%', padding: '11px 0', borderRadius: 11, color: C.text, cursor: 'pointer', fontSize: 13.5, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 'clamp(12px, 2vh, 18px)' }}>
               <GoogleIcon /> Continuar com Google
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'clamp(12px, 2vh, 18px)' }}>
               <div style={{ flex: 1, height: 1, background: C.borderSubtle }} />
               <span style={{ color: C.textSubtle, fontSize: 12 }}>ou</span>
               <div style={{ flex: 1, height: 1, background: C.borderSubtle }} />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(10px, 1.7vh, 14px)' }}>
               {mode === 'register' && <Field label="Nome completo" value={name} onChange={setName} placeholder={USER.name} />}
               <Field label="E-mail" value={email} onChange={setEmail} type="email" placeholder={USER.email} />
               <div>
@@ -129,13 +137,13 @@ export default function LoginPage({ onEnter }: { onEnter: () => void }) {
             </div>
 
             {mode === 'login' && (
-              <button style={{ background: 'none', border: 'none', color: C.purpleLight, fontSize: 13, cursor: 'pointer', marginTop: 11, padding: 0 }}>
+              <button style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: C.purpleLight, fontSize: 13, cursor: 'pointer', marginTop: 11, padding: 0 }}>
                 Esqueci minha senha
               </button>
             )}
 
             <button onClick={submit} disabled={loading} className="atlas-btn-primary"
-              style={{ width: '100%', padding: '13px 0', borderRadius: 11, color: 'white', border: 'none', cursor: loading ? 'default' : 'pointer', fontSize: 14.5, fontWeight: 600, marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
+              style={{ width: '100%', padding: '13px 0', borderRadius: 11, color: 'white', border: 'none', cursor: loading ? 'default' : 'pointer', fontSize: 14.5, fontWeight: 600, marginTop: 'clamp(14px, 2.4vh, 20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
               {loading ? (
                 <>
                   <span style={{ width: 15, height: 15, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin-slow 0.7s linear infinite', display: 'inline-block' }} />
@@ -146,48 +154,52 @@ export default function LoginPage({ onEnter }: { onEnter: () => void }) {
               )}
             </button>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 22, color: C.textSubtle, fontSize: 11.5 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 'clamp(14px, 2.4vh, 22px)', color: C.textSubtle, fontSize: 11.5 }}>
               <span>Conexão segura</span>
               <span>LGPD</span>
               <span>14 dias grátis</span>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )
 }
 
-// O insight é o protagonista; o gráfico entra apenas como contexto.
+// O gráfico vem primeiro, como contexto; o insight e a recomendação levam o peso visual.
 function InsightPreview() {
   return (
     <div className="atlas-reveal" style={{
-      animationDelay: '420ms', maxWidth: 430, position: 'relative', overflow: 'hidden',
+      animationDelay: '420ms', maxWidth: 470,
       background: 'rgba(17,13,32,0.72)', border: '1px solid rgba(139,92,246,0.18)', borderRadius: 16,
-      padding: '18px 20px', backdropFilter: 'blur(16px)',
+      padding: 'clamp(14px, 2vh, 18px) 18px', backdropFilter: 'blur(16px)',
     }}>
-      <div style={{ position: 'absolute', right: -10, bottom: -6, opacity: 0.3, pointerEvents: 'none' }}>
-        <Sparkline values={[78, 82, 85, 83, 80, 76, 72, 69]} color={C.orange} width={190} height={62} fill={false} strokeWidth={1.5} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ color: C.textSubtle, fontSize: 11.5 }}>Faturamento · últimas 8 semanas</span>
+        <span style={{ color: C.orange, fontSize: 11.5, fontWeight: 600 }}>-8%</span>
+      </div>
+      <div style={{ opacity: 0.75 }}>
+        <Sparkline values={[78, 82, 85, 83, 80, 76, 72, 69]} color={C.orange} width={430} height={30} strokeWidth={1.5} responsive />
       </div>
 
-      <div style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.orange }} />
-          <span style={{ color: C.orange, fontSize: 11.5, fontWeight: 600 }}>Atenção</span>
-          <span style={{ color: C.textSubtle, opacity: 0.45 }}>·</span>
-          <span style={{ color: C.textMuted, fontSize: 12 }}>R$ 6,4K por mês em risco</span>
-        </div>
+      <div style={{ height: 1, background: C.borderSubtle, margin: 'clamp(10px, 1.5vh, 13px) 0' }} />
 
-        <div style={{ color: C.text, fontSize: 15.5, fontWeight: 600, lineHeight: 1.42, marginBottom: 12, maxWidth: 330 }}>
-          Faturamento caiu 8% nas últimas 3 semanas
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.orange }} />
+        <span style={{ color: C.orange, fontSize: 11.5, fontWeight: 600 }}>Atenção</span>
+        <span style={{ color: C.textSubtle, opacity: 0.45 }}>·</span>
+        <span style={{ color: C.textMuted, fontSize: 12 }}>R$ 6,4K por mês em risco</span>
+      </div>
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'rgba(139,92,246,0.09)', borderRadius: 11, padding: '11px 13px' }}>
-          <Wand2 size={13} color={C.purpleNeon} style={{ flexShrink: 0, marginTop: 2 }} />
-          <span style={{ color: C.text, fontSize: 13, lineHeight: 1.55 }}>
-            Os produtos B e C concentram a queda. Teste uma promoção de três dias e acompanhe a resposta.
-          </span>
-        </div>
+      <div style={{ color: C.text, fontSize: 'clamp(13.5px, calc(0.6vh + 8.5px), 14.5px)', fontWeight: 600, lineHeight: 1.42, marginBottom: 'clamp(8px, 1.3vh, 11px)' }}>
+        Faturamento caiu 8% nas últimas 3 semanas
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'rgba(139,92,246,0.09)', borderRadius: 11, padding: '10px 12px' }}>
+        <Wand2 size={13} color={C.purpleNeon} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span style={{ color: C.text, fontSize: 'clamp(12px, calc(0.5vh + 8px), 13px)', lineHeight: 1.55 }}>
+          Os produtos B e C concentram a queda. Teste uma promoção de três dias e acompanhe a resposta.
+        </span>
       </div>
     </div>
   )
