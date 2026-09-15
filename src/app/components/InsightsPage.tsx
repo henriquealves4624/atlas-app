@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import {
-  LayoutGrid, Columns3, List, Download, Plus, Lightbulb, ChevronDown, ChevronRight, Plug,
+  Columns3, List, Download, Plus, Lightbulb, ChevronDown, ChevronRight, Plug, X,
 } from 'lucide-react'
 import { C } from './atlas-tokens'
 import {
-  Reveal, Card, Segmented, ContextSelector, EmptyState, PrimaryButton, GhostButton,
+  Reveal, Card, Segmented, ContextSelector, EmptyState, PrimaryButton, GhostButton, Modal,
   STATUS_META, PRIORITY_META, TYPE_META, PanelTag, shortDate,
 } from './atlas-ui'
 import InsightCard from './InsightCard'
@@ -12,15 +12,16 @@ import { TriageModal, ConclusionModal } from './InsightTriage'
 import { useAtlas, type Insight } from '../store'
 import type { InsightStatus } from './atlas-data'
 
-type View = 'cards' | 'kanban' | 'lista'
+type View = 'kanban' | 'lista'
 
 const FLOW: InsightStatus[] = ['backlog', 'andamento', 'concluido', 'descartado']
 const ALL: InsightStatus[] = ['gerado', ...FLOW]
 
 export default function InsightsPage() {
   const { insights, projects, panels, go, insightStatusFilter, setInsightStatusFilter } = useAtlas()
-  const [view, setView] = useState<View>('cards')
+  const [view, setView] = useState<View>('kanban')
   const [context, setContext] = useState<string | null>(null)
+  const [detail, setDetail] = useState<string | null>(null)
   const [triage, setTriage] = useState<Insight | null>(null)
   const [conclude, setConclude] = useState<Insight | null>(null)
 
@@ -60,7 +61,6 @@ export default function InsightsPage() {
             value={view}
             onChange={(v: View) => setView(v)}
             options={[
-              { value: 'cards', label: 'Cards', icon: <LayoutGrid size={13} /> },
               { value: 'kanban', label: 'Kanban', icon: <Columns3 size={13} /> },
               { value: 'lista', label: 'Lista', icon: <List size={13} /> },
             ]}
@@ -72,7 +72,7 @@ export default function InsightsPage() {
         </div>
       </Reveal>
 
-      {view !== 'kanban' && (
+      {view === 'lista' && (
         <Reveal delay={100}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 20, borderBottom: `1px solid ${C.borderSubtle}`, paddingBottom: 2 }}>
             {ALL.map(status => {
@@ -92,22 +92,21 @@ export default function InsightsPage() {
       )}
 
       <Reveal delay={140}>
-        {view === 'cards' && (
-          <CardsView
-            insights={scoped.filter(i => i.status === insightStatusFilter)}
-            status={insightStatusFilter}
-            onTriage={setTriage}
-            onConclude={setConclude}
-          />
-        )}
-        {view === 'kanban' && (
-          <KanbanView insights={scoped} onTriage={setTriage} onConclude={setConclude} />
-        )}
-        {view === 'lista' && (
-          <ListView insights={scoped.filter(i => i.status === insightStatusFilter)} />
+        {view === 'kanban' ? (
+          <KanbanView insights={scoped} onOpen={setDetail} onTriage={setTriage} onConclude={setConclude} />
+        ) : (
+          <ListView insights={scoped.filter(i => i.status === insightStatusFilter)} onOpen={setDetail} />
         )}
       </Reveal>
 
+      {detail && (
+        <InsightDetailModal
+          insightId={detail}
+          onClose={() => setDetail(null)}
+          onTriage={i => { setDetail(null); setTriage(i) }}
+          onConclude={i => { setDetail(null); setConclude(i) }}
+        />
+      )}
       {triage && <TriageModal insight={triage} onClose={() => setTriage(null)} />}
       {conclude && <ConclusionModal insight={conclude} onClose={() => setConclude(null)} />}
     </div>
@@ -125,39 +124,36 @@ function Header() {
   )
 }
 
-// ── Visão em cards ──────────────────────────────────────────────────────────
+// ── Detalhe do insight (aberto a partir do Kanban ou da Lista) ─────────────
 
-function CardsView({ insights, status, onTriage, onConclude }: {
-  insights: Insight[]; status: InsightStatus; onTriage: (i: Insight) => void; onConclude: (i: Insight) => void
+function InsightDetailModal({ insightId, onClose, onTriage, onConclude }: {
+  insightId: string; onClose: () => void; onTriage: (i: Insight) => void; onConclude: (i: Insight) => void
 }) {
-  const meta = STATUS_META[status]
-  if (insights.length === 0) {
-    return (
-      <Card padding={0}>
-        <EmptyState
-          compact
-          icon={meta.icon}
-          title={`Nada em ${meta.label.toLowerCase()}`}
-          description={status === 'gerado'
-            ? 'Você já avaliou todos os insights identificados até aqui.'
-            : 'Nenhum insight neste estágio no contexto selecionado.'}
-        />
-      </Card>
-    )
-  }
+  const { insights } = useAtlas()
+  const insight = insights.find(i => i.id === insightId)
+  if (!insight) return null
+  const status = STATUS_META[insight.status]
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-      {insights.map(insight => (
-        <InsightCard key={insight.id} insight={insight} onAdd={onTriage} onConclude={onConclude} showOrigin showStatus={false} />
-      ))}
-    </div>
+    <Modal onClose={onClose} width={620} padding={26}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: status.soft, color: status.color, borderRadius: 7, padding: '4px 10px', fontSize: 12, fontWeight: 600 }}>
+          {status.icon}{status.short}
+        </span>
+        <button onClick={onClose} aria-label="Fechar"
+          style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', color: C.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <X size={14} />
+        </button>
+      </div>
+      <InsightCard bare insight={insight} showOrigin onAdd={onTriage} onConclude={onConclude} />
+    </Modal>
   )
 }
 
 // ── Kanban ──────────────────────────────────────────────────────────────────
 
-function KanbanView({ insights, onTriage, onConclude }: {
-  insights: Insight[]; onTriage: (i: Insight) => void; onConclude: (i: Insight) => void
+function KanbanView({ insights, onOpen, onTriage, onConclude }: {
+  insights: Insight[]; onOpen: (id: string) => void; onTriage: (i: Insight) => void; onConclude: (i: Insight) => void
 }) {
   const { setInsightStatus, toast } = useAtlas()
   const [dragging, setDragging] = useState<string | null>(null)
@@ -194,11 +190,14 @@ function KanbanView({ insights, onTriage, onConclude }: {
           {inboxOpen && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(258px, 1fr))', gap: 10, padding: '0 18px 18px' }}>
               {generated.map(insight => (
-                <div key={insight.id} style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${C.borderSubtle}`, borderLeft: `2px solid ${TYPE_META[insight.type].color}`, borderRadius: 11, padding: '13px 15px' }}>
+                <div key={insight.id} role="button" tabIndex={0} className="insight-tile"
+                  onClick={() => onOpen(insight.id)}
+                  onKeyDown={e => { if (e.key === 'Enter') onOpen(insight.id) }}
+                  style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${C.borderSubtle}`, borderLeft: `2px solid ${TYPE_META[insight.type].color}`, borderRadius: 11, padding: '13px 15px' }}>
                   <OriginTag insight={insight} />
                   <div style={{ color: C.text, fontSize: 13.5, fontWeight: 600, lineHeight: 1.45, marginBottom: 6 }}>{insight.title}</div>
                   <div style={{ color: C.textSubtle, fontSize: 12, marginBottom: 11 }}>{insight.impact}</div>
-                  <button onClick={() => onTriage(insight)} className="atlas-btn-primary"
+                  <button onClick={e => { e.stopPropagation(); onTriage(insight) }} className="atlas-btn-primary"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: 'none', color: 'white', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
                     <Plus size={12} /> Adicionar
                   </button>
@@ -231,6 +230,7 @@ function KanbanView({ insights, onTriage, onConclude }: {
                 {items.map(insight => (
                   <KanbanCard key={insight.id} insight={insight}
                     dragging={dragging === insight.id}
+                    onOpen={() => onOpen(insight.id)}
                     onDragStart={() => setDragging(insight.id)}
                     onDragEnd={() => { setDragging(null); setOver(null) }}
                   />
@@ -247,14 +247,14 @@ function KanbanView({ insights, onTriage, onConclude }: {
       </div>
 
       <p style={{ color: C.textSubtle, fontSize: 12.5, marginTop: 16 }}>
-        Arraste os cards entre as colunas para mudar o estágio. Ao mover para concluídos, o Atlas pergunta o que foi feito.
+        Arraste os cards entre as colunas para mudar o estágio ou clique em um insight para ver detalhes e ações. Ao mover para concluídos, o Atlas pergunta o que foi feito.
       </p>
     </div>
   )
 }
 
-function KanbanCard({ insight, dragging, onDragStart, onDragEnd }: {
-  insight: Insight; dragging: boolean; onDragStart: () => void; onDragEnd: () => void
+function KanbanCard({ insight, dragging, onOpen, onDragStart, onDragEnd }: {
+  insight: Insight; dragging: boolean; onOpen: () => void; onDragStart: () => void; onDragEnd: () => void
 }) {
   const { panels } = useAtlas()
   const panel = panels.find(p => p.id === insight.panelId)
@@ -262,6 +262,8 @@ function KanbanCard({ insight, dragging, onDragStart, onDragEnd }: {
 
   return (
     <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
+      role="button" tabIndex={0} onClick={onOpen}
+      onKeyDown={e => { if (e.key === 'Enter') onOpen() }}
       className={`kanban-card${dragging ? ' dragging' : ''}`}
       style={{ background: 'rgba(20,16,38,0.9)', border: `1px solid ${C.border}`, borderRadius: 11, padding: '13px 14px' }}>
       {panel && <div style={{ marginBottom: 8 }}><PanelTag name={panel.name} /></div>}
@@ -286,7 +288,7 @@ function OriginTag({ insight }: { insight: Insight }) {
 
 const COLS = ['Insight', 'Projeto', 'Painel', 'Categoria', 'Prioridade', 'Status', 'Data', 'Impacto']
 
-function ListView({ insights }: { insights: Insight[] }) {
+function ListView({ insights, onOpen }: { insights: Insight[]; onOpen: (id: string) => void }) {
   const { projects, panels } = useAtlas()
 
   if (insights.length === 0) {
@@ -318,7 +320,8 @@ function ListView({ insights }: { insights: Insight[] }) {
               const prio = PRIORITY_META[insight.priority]
               const status = STATUS_META[insight.status]
               return (
-                <tr key={insight.id} className="table-row" style={{ borderBottom: `1px solid ${C.borderSubtle}` }}>
+                <tr key={insight.id} className="table-row" onClick={() => onOpen(insight.id)}
+                  style={{ borderBottom: `1px solid ${C.borderSubtle}`, cursor: 'pointer' }}>
                   <td style={{ padding: '14px 16px', color: C.text, fontSize: 13.5, fontWeight: 500, maxWidth: 320 }}>{insight.title}</td>
                   <td style={cell}>{project?.name ?? '—'}</td>
                   <td style={cell}>{panel?.name ?? '—'}</td>

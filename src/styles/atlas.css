@@ -360,9 +360,49 @@
 }
 .kanban-card.dragging { opacity: 0.4; cursor: grabbing; }
 
+/* Insight clicável na caixa de entrada do Kanban */
+.insight-tile { cursor: pointer; transition: background 0.18s ease; }
+.insight-tile:hover { background: rgba(139, 92, 246, 0.06) !important; }
+
 /* Linha de tabela */
 .table-row { transition: background 0.15s ease; }
 .table-row:hover { background: rgba(139, 92, 246, 0.05); }
+
+/* ── Painéis: menu de projetos e painéis ─────────────────────────────────── */
+.explorer-item { background: transparent; transition: background 0.16s ease; }
+.explorer-item:hover { background: rgba(255, 255, 255, 0.04); }
+.explorer-item.active { background: rgba(139, 92, 246, 0.13); }
+.explorer-icon { background: transparent; transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease; }
+.explorer-icon:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: #e2e8f0 !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+@keyframes branch-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.explorer-branch { animation: branch-in 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Insights do painel lado a lado */
+.panel-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+@media (max-width: 1080px) {
+  .panel-insights-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Indicadores do painel: quatro por linha, dois em telas menores */
+.panel-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1400px) {
+  .panel-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* Aparecimento de um insight recém-gerado */
 @keyframes insight-in {
@@ -372,7 +412,7 @@
 .insight-in { animation: insight-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .atlas-modal, .atlas-overlay, .flow-step, .line-fill, .check-pop, .insight-in {
+  .atlas-modal, .atlas-overlay, .flow-step, .line-fill, .check-pop, .insight-in, .explorer-branch {
     animation: none !important;
     opacity: 1 !important;
   }

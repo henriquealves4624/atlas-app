@@ -4,7 +4,7 @@
  * Roda com: npx vitest run --config vitest.config.ts
  */
 import { describe, expect, it, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 
@@ -85,15 +85,15 @@ describe('jornada do Atlas', () => {
     await waitFor(() => expect(screen.getByText(/Defina prioridade e categoria/i)).toBeTruthy())
     await user.click(screen.getByRole('button', { name: /^Adicionar$/i }))
 
-    // Central de Insights → backlog
+    // Central de Insights abre no Kanban, com o insight no backlog
     await user.click(screen.getByRole('button', { name: /Central de Insights/i }))
     await waitFor(() => expect(screen.getByRole('heading', { name: /Central de Insights/i })).toBeTruthy())
-    await user.click(screen.getByRole('button', { name: /Backlog\s*1/i }))
-    expect(screen.getByText(/CAC subiu 15%/i)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Cards$/i })).toBeNull()
 
-    // Iniciar ação → em andamento
-    await user.click(screen.getByRole('button', { name: /Iniciar ação/i }))
-    await user.click(screen.getByRole('button', { name: /Em andamento\s*1/i }))
+    // Detalhe do insight → iniciar ação → em andamento
+    await user.click(screen.getByText(/CAC subiu 15%/i))
+    await user.click(await screen.findByRole('button', { name: /Iniciar ação/i }))
+    await waitFor(() => expect(screen.getByText(/Ação iniciada/i)).toBeTruthy())
 
     // Concluir com registro do que foi feito
     await user.click(screen.getByRole('button', { name: /^Concluir$/i }))
@@ -105,11 +105,15 @@ describe('jornada do Atlas', () => {
     await user.click(screen.getByRole('button', { name: /Concluir insight/i }))
 
     await waitFor(() => expect(screen.getByText(/Insight concluído/i)).toBeTruthy())
+
+    // Lista → Concluídos → detalhe com a ação registrada
+    await user.click(screen.getByRole('button', { name: /^Lista$/i }))
     await user.click(screen.getByRole('button', { name: /Concluídos\s*1/i }))
-    expect(screen.getByText(/Ação registrada/i)).toBeTruthy()
+    await user.click(within(screen.getByRole('table')).getByText(/CAC subiu 15%/i))
+    expect(await screen.findByText(/Ação registrada/i)).toBeTruthy()
   }, 40000)
 
-  it('alterna entre as três visualizações da Central', async () => {
+  it('alterna entre Kanban e Lista na Central', async () => {
     const user = userEvent.setup()
     render(<App />)
     await login(user)
@@ -141,14 +145,20 @@ describe('jornada do Atlas', () => {
       { timeout: 10000 },
     )
 
-    // Central → Kanban → Lista
+    // No painel, o card compacto mostra só o título descritivo, sem o resumo
+    expect(screen.queryByText(/O restante do portfólio se manteve estável/i)).toBeNull()
+
+    // Central abre no Kanban; a visão em cards não existe mais
     await user.click(screen.getByRole('button', { name: /Central de Insights/i }))
-    await user.click(screen.getByRole('button', { name: /Kanban/i }))
+    expect(screen.queryByRole('button', { name: /^Cards$/i })).toBeNull()
     expect(screen.getAllByText(/Arraste um insight para cá/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Insights gerados/i).length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('button', { name: /Lista/i }))
+    await user.click(screen.getByRole('button', { name: /^Lista$/i }))
     expect(screen.getByRole('button', { name: /Exportar CSV/i })).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: /^Kanban$/i }))
+    expect(screen.getAllByText(/Arraste um insight para cá/i).length).toBeGreaterThan(0)
   }, 40000)
 
   it('monta o painel Orçado X Realizado com insights, indicadores e resposta da IA coerentes', async () => {
@@ -193,7 +203,12 @@ describe('jornada do Atlas', () => {
     expect(screen.getByText('Atingimento do orçamento')).toBeTruthy()
     expect(screen.queryByText('Vendedores acima da meta')).toBeNull()
 
-    await user.click(screen.getByRole('button', { name: /Ver mais/i }))
+    // Menu de projetos e painéis ao lado do menu principal
+    const explorer = screen.getByRole('complementary', { name: /Projetos e painéis/i })
+    expect(within(explorer).getByText('Financeiro')).toBeTruthy()
+    expect(within(explorer).getAllByText('Orçado X Realizado').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: /^Ver mais$/i }))
     expect(screen.getByText('Vendedores acima da meta')).toBeTruthy()
     expect(screen.getByText('Projeção de fechamento do ano')).toBeTruthy()
 

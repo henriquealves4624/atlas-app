@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Play, Check, RotateCcw, BarChart3, MessageSquare } from 'lucide-react'
+import { Plus, Trash2, Play, Check, RotateCcw, BarChart3, MessageSquare, Sparkles } from 'lucide-react'
 import { C } from './atlas-tokens'
 import { TYPE_META, PRIORITY_META, STATUS_META, PanelTag, relativeTime } from './atlas-ui'
 import { useAtlas, type Insight } from '../store'
@@ -11,28 +11,34 @@ interface Props {
   showOrigin?: boolean
   showStatus?: boolean
   secondaryActions?: boolean
+  // Sem moldura própria, para exibir o insight dentro de um modal.
+  bare?: boolean
 }
 
-export default function InsightCard({
-  insight, onAdd, onConclude, showOrigin = false, showStatus = false, secondaryActions = true,
-}: Props) {
-  const { setInsightStatus, go, askAtlas, toast, panels, projects } = useAtlas()
-  const type = TYPE_META[insight.type]
-  const prio = PRIORITY_META[insight.priority]
-  const status = STATUS_META[insight.status]
-  const panel = panels.find(p => p.id === insight.panelId)
-  const project = projects.find(p => p.id === insight.projectId)
-
-  const discard = () => {
+function useDiscard(insight: Insight) {
+  const { setInsightStatus, toast } = useAtlas()
+  return () => {
     setInsightStatus(insight.id, 'descartado')
     toast('Insight descartado', insight.title, 'warn', {
       label: 'Desfazer',
       onClick: () => setInsightStatus(insight.id, 'gerado'),
     })
   }
+}
+
+export default function InsightCard({
+  insight, onAdd, onConclude, showOrigin = false, showStatus = false, secondaryActions = true, bare = false,
+}: Props) {
+  const { setInsightStatus, go, askAtlas, toast, panels, projects } = useAtlas()
+  const discard = useDiscard(insight)
+  const type = TYPE_META[insight.type]
+  const prio = PRIORITY_META[insight.priority]
+  const status = STATUS_META[insight.status]
+  const panel = panels.find(p => p.id === insight.panelId)
+  const project = projects.find(p => p.id === insight.projectId)
 
   return (
-    <div className="insight-in" style={{
+    <div className={bare ? undefined : 'insight-in'} style={bare ? undefined : {
       background: 'rgba(15,12,28,0.6)',
       border: `1px solid ${C.border}`,
       borderLeft: `2px solid ${type.color}`,
@@ -57,10 +63,10 @@ export default function InsightCard({
       {showOrigin && panel && (
         <div style={{ marginBottom: 8 }}><PanelTag name={panel.name} /></div>
       )}
-      <h3 style={{ color: C.text, fontSize: 15.5, fontWeight: 600, lineHeight: 1.4, letterSpacing: '-0.01em', marginBottom: 7 }}>
+      <h3 style={{ color: C.text, fontSize: bare ? 18 : 15.5, fontWeight: 600, lineHeight: 1.4, letterSpacing: '-0.01em', marginBottom: 7 }}>
         {insight.title}
       </h3>
-      <p style={{ color: C.textMuted, fontSize: 13.5, lineHeight: 1.68, marginBottom: insight.recommendation ? 13 : 4 }}>
+      <p style={{ color: C.textMuted, fontSize: bare ? 14 : 13.5, lineHeight: 1.68, marginBottom: insight.recommendation ? 13 : 4 }}>
         {insight.summary}
       </p>
 
@@ -128,8 +134,57 @@ export default function InsightCard({
   )
 }
 
-function Action({ icon, label, onClick, primary, tone }: {
-  icon: React.ReactNode; label: string; onClick: () => void; primary?: boolean; tone?: 'danger'
+// Versão enxuta da leitura do painel: o título já carrega o achado, a
+// recomendação cabe em uma linha e os cards ficam lado a lado.
+export function CompactInsightCard({ insight, onAdd }: { insight: Insight; onAdd?: (insight: Insight) => void }) {
+  const [showReco, setShowReco] = useState(false)
+  const discard = useDiscard(insight)
+  const type = TYPE_META[insight.type]
+
+  return (
+    <div className="insight-in" style={{
+      display: 'flex', flexDirection: 'column', minWidth: 0,
+      background: 'rgba(15,12,28,0.6)',
+      border: `1px solid ${C.border}`,
+      borderLeft: `2px solid ${type.color}`,
+      borderRadius: 13,
+      padding: '13px 16px 14px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7, minWidth: 0 }}>
+        <span style={{ color: type.color, fontSize: 11.5, fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>{type.label}</span>
+        <span style={{ color: C.textSubtle, opacity: 0.45 }}>·</span>
+        <span style={{ color: C.textMuted, fontSize: 12, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{insight.impact}</span>
+        <span style={{ marginLeft: 'auto', color: C.textSubtle, fontSize: 11.5, flexShrink: 0 }}>{relativeTime(insight.createdAt)}</span>
+      </div>
+
+      <h3 style={{ color: C.text, fontSize: 14, fontWeight: 600, lineHeight: 1.45, letterSpacing: '-0.005em', marginBottom: 10 }}>
+        {insight.title}
+      </h3>
+
+      {insight.recommendation && (
+        <button onClick={() => setShowReco(v => !v)} aria-expanded={showReco}
+          title={showReco ? 'Recolher recomendação' : insight.recommendation}
+          style={{ display: 'flex', alignItems: 'flex-start', gap: 7, width: '100%', textAlign: 'left', background: 'rgba(139,92,246,0.07)', border: 'none', borderRadius: 8, padding: '7px 10px', marginBottom: 11, cursor: 'pointer', color: C.textMuted, fontSize: 12.5, lineHeight: 1.5 }}>
+          <Sparkles size={12} color={C.purpleLight} style={{ flexShrink: 0, marginTop: 3 }} />
+          <span style={{ flex: 1, minWidth: 0, ...(showReco ? {} : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>
+            <span style={{ color: C.purpleLight, fontWeight: 600 }}>Recomendação: </span>
+            {insight.recommendation}
+          </span>
+        </button>
+      )}
+
+      {insight.status === 'gerado' && onAdd && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 'auto', flexWrap: 'wrap' }}>
+          <Action primary size="sm" icon={<Plus size={13} />} label="Adicionar aos Insights" onClick={() => onAdd(insight)} />
+          <Action size="sm" icon={<Trash2 size={13} />} label="Descartar" onClick={discard} tone="danger" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Action({ icon, label, onClick, primary, tone, size = 'md' }: {
+  icon: React.ReactNode; label: string; onClick: () => void; primary?: boolean; tone?: 'danger'; size?: 'sm' | 'md'
 }) {
   const [hover, setHover] = useState(false)
   const color = primary ? 'white' : tone === 'danger' ? C.red : C.textMuted
@@ -137,10 +192,10 @@ function Action({ icon, label, onClick, primary, tone }: {
     <button onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       className={primary ? 'atlas-btn-primary' : ''}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 9,
+        display: 'inline-flex', alignItems: 'center', gap: 6, padding: size === 'sm' ? '6px 11px' : '7px 13px', borderRadius: 9,
         border: primary ? 'none' : `1px solid ${hover ? (tone === 'danger' ? 'rgba(248,113,113,0.3)' : C.borderMd) : C.borderSubtle}`,
         background: primary ? undefined : hover ? (tone === 'danger' ? 'rgba(248,113,113,0.1)' : 'rgba(139,92,246,0.09)') : 'transparent',
-        color, fontSize: 12.5, fontWeight: primary ? 600 : 500, cursor: 'pointer', transition: 'all 0.16s',
+        color, fontSize: size === 'sm' ? 12 : 12.5, fontWeight: primary ? 600 : 500, cursor: 'pointer', transition: 'all 0.16s',
       }}>
       {icon}{label}
     </button>
